@@ -32,17 +32,30 @@ class Inmate(Base):
 	sex = Column(String)
 	birth_date = Column(Date)
 	race = Column(String)
-	entry_year = Column(Integer)
-	release_date = Column(Date)
-	conditional_release_date = Column(Date)
-	parole_discharge_date = Column(Date)
-
-	crime_id = Column(Integer, ForeignKey('crimes.id'))
-	sentence_id = Column(Integer, ForeignKey('sentences.id'))
+	
 	parole_id = Column(Integer, ForeignKey('hearings.id'))
 	housing_interview_facility_id = Column(Integer, ForeignKey('facilities.id'))
 
+class InmateCrime(Base):
+	__tablename__ = 'inmate_crime'
+	
+	id = Column(Integer, primary_key = True)
+	entry_year = Column(Integer)
+	inmate_id = Column(Integer, ForeignKey('inmates.id'))
+	crime_id = Column(Integer, ForeignKey('crimes.id'))
+	sentence_id = Column(Integer, ForeignKey('sentences.id'))
+	
+class ExitDate(Base):
+	__tablename__ = 'exit_dates'
+	
+	id = Column(Integer, primary_key = True)
+	inmate_id = Column(Integer, ForeignKey('inmates.id'))
+	crime_id = Column(Integer, ForeignKey('crimes.id'))
+	release_date = Column(Date)
+	parole_discharge_date = Column(Date)
+	conditional_release_date = Column(Date)
 
+	
 class Facility(Base):
 	__tablename__ = 'facilities'
 	name = Column(String)

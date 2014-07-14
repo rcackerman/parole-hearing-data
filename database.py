@@ -54,7 +54,6 @@ class ExitDate(Base):
 	release_date = Column(Date)
 	parole_discharge_date = Column(Date)
 	conditional_release_date = Column(Date)
-
 	
 class Facility(Base):
 	__tablename__ = 'facilities'
@@ -68,3 +67,6 @@ class Hearing(Base):
 	interview_date = Column(Date)
 	interview_type = Column(String)
 	interview_decision = Column(String)
+
+
+Base.metadata.create_all(bind=engine)

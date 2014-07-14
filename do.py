@@ -1,45 +1,38 @@
+#--------------
+# Gets all pages we need to scrape
+#--------------
+
 import mechanize
 import cookielib
 from bs4 import BeautifulSoup
 import re
+import time
 import csv
+
 
 # CHANGEME
 csvfile = open("books.csv","w")
 writer = csv.writer(csvfile)
 writer.writerow(["title","author","pub"])
 
+baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?month={month}&year={year}'
+urls_to_visit = []
+
+# The parole calendar goes 12 months back
+# and 6 months forward (add an extra month to account for current month)
+today = time.localtime()
+month_array = [time.localtime(time.mktime([now.tm_year, now.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(-24, 7)]
+
 mech = mechanize.Browser()
 mech.set_handle_robots(False)
 
-cj = cookielib.LWPCookieJar()
-mech.set_cookiejar(cj)
-
 mech.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
 
-theurl = 'https://www1.columbia.edu/pamacea/login.shtml?target=/sec-cgi-bin/cul/prox/ezpwebserv-ezproxy.cgi%3furl=ezp.2aHR0cDovL2ZpcnN0c2VhcmNoLm9jbGMub3JnL2ZzaXA.ZGJuYW1lPVdvcmxkQ2F0JmRvbmU9cmVmZXJlcg--&pamservice=krb&userfile='
+for monthyear in month_array:
+   url = baseurl.format(month = monthyear[1], year = monthyear[0])
+   urls_to_visit.append(url)
 
 mech.open(theurl)
-
-mech.select_form(nr=0)
-mech["username"] = "CHANGEME"
-mech["password"] = "CHANGEME"
-results = mech.submit().read()
-
-mech.select_form(nr=0)
-
-mech.form['term1'] = "fiction"
-mech.form['index1'] = ["ge:"]
-
-mech.form['term2'] = "1939-1945"
-mech.form['index2'] = ["kw:"]
-
-mech.form['term3'] = "world war"
-mech.form['index3'] = ["kw:"]
-
-mech.form["limit-yr:"] = "1940-1955"
-mech.form["limit-la="] = ["eng"]
-mech.form["limit-dt="] = ["bks"]
 
 results = mech.submit().read()
 bs = BeautifulSoup(results)

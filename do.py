@@ -37,9 +37,6 @@ op = mech.open(urls_to_visit[10])
 
 bs = BeautifulSoup(op.read())
 
-baseurl = mech.geturl()
-baseurl = re.sub("(http://[^/]+)/.*","\\1",baseurl)
-
 i = 0
 
 while i < 1000:

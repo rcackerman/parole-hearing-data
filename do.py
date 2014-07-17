@@ -13,7 +13,7 @@ urls_to_visit = []
 parolees = []
 parolee_urls = []
 
-# The parole calendar goes 12 months back
+# The parole calendar goes 24 months back
 # and 6 months forward (add an extra month to account for current month)
 today = time.localtime()
 month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(-24, 7)]
@@ -70,7 +70,7 @@ for url in urls_to_visit:
 # Clean up
 # TODO:
 #   * drop names column
-#   * get first 2 digits of DIN number for year of entry
+#   * get first 2 digits of DIN number for year of entry; format it into 19__ / 20__ (if <20, then 19__; otherwise 20__?)
 
 with open('output.csv', 'a') as csvfile:
    w = csv.writer(csvfile, delimiter=',')

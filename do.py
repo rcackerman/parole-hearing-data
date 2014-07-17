@@ -4,17 +4,14 @@
 
 import mechanize
 from bs4 import BeautifulSoup
-import re, time, csv
+import re, time, csv, sys
 from string import ascii_uppercase
 
-
-# CHANGEME
-csvfile = open("books.csv","w")
-writer = csv.writer(csvfile)
-writer.writerow(["title","author","pub"])
-
 baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
+detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
 urls_to_visit = []
+parolees = []
+parolee_urls = []
 
 # The parole calendar goes 12 months back
 # and 6 months forward (add an extra month to account for current month)
@@ -33,53 +30,48 @@ for monthyear in month_array:
       url = baseurl.format(letter = l, month = monthvar, year = monthyear[0])
       urls_to_visit.append(url)
 
-op = mech.open(urls_to_visit[10])
+##
+# Cycles through all the urls created
+# by the month, year, and letter combos
+#
+# TODO
+#   * add detail page info for each person
+#   * don't grab the table headers
 
-bs = BeautifulSoup(op.read())
+for url in urls_to_visit:
+   print url
 
-i = 0
+   op = mech.open(url)
 
-while i < 1000:
+   bs = BeautifulSoup(op.read())
 
-   init = False
-   
-   for td in bs.find_all("td"):
-   
-      t = td.getText(" ")
-      t = re.sub("\n"," ",t)
-      t = t.strip()
-   
-      if re.match("^[0-9]+\..*",t): 
-   
-         init = True
-         continue
-   
-      if t and init:
-   
-         title = re.sub("(.*)Author:.*","\\1", t)
-         title = title.strip()
-         title = title.encode("ascii","ignore")
-         author = re.sub(".*Author:(.*)Publication:.*","\\1", t)
-         author = author.strip()
-         author = author.encode("ascii","ignore")
-         pub = re.sub(".*Publication:(.*)Document:.*","\\1", t)
-         pub = pub.strip()
-         pub = pub.encode("ascii","ignore")
-   
-         writer.writerow([title,author,pub])      
-         init = False
-   
-      else: continue
-  
-   n = bs.find("img",attrs={"src":"/images/nfs_next.gif"}) 
+   # All parolees are within the central table.
+   parolee_table = bs.find('table', class_ = "intv")
 
-   if n.parent.name == "a":
+   # Splitting out into one line per parolee.
+   try:
+      parolee_line = parolee_table.find_all('tr')
 
-      theurl = baseurl+n.parent["href"]
-      print theurl
-      results = mech.open(theurl).read()
-      bs = BeautifulSoup(results)
+      for pl in parolee_line:
+         pl_list = []
 
-   else: break
+         # Get all info
+         for td in pl.find_all(['td', 'th']):
+            pl_list.append(td.string.strip())
+         parolees.append(pl_list)
 
-   i += 1
+         # Get details page url
+         parolee_url = detailurl.format(number = pl_list[1])
+         parolee_urls.append(parolee_url)
+   except:
+      continue
+
+##
+# Clean up
+# TODO:
+#   * drop names column
+#   * get first 2 digits of DIN number for year of entry
+
+with open('output.csv', 'a') as csvfile:
+   w = csv.writer(csvfile, delimiter=',')
+   w.writerows(parolees)

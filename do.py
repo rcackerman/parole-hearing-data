@@ -20,15 +20,13 @@ month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0
 letters = list(ascii_uppercase)
 
 mech = mechanize.Browser()
-mech.set_handle_robots(False)
-
-mech.addheaders = [('User-agent', 'Mozilla/5.0 (X11; U; Linux i686; en-US; rv:1.9.0.1) Gecko/2008071615 Fedora/3.0.1-1.fc9 Firefox/3.0.1')]
+# mech.set_handle_robots(False)
 
 for monthyear in month_array:
-   monthvar = str(monthyear[1]).zfill(2)
-   for l in letters:
-      url = baseurl.format(letter = l, month = monthvar, year = monthyear[0])
-      urls_to_visit.append(url)
+  monthvar = str(monthyear[1]).zfill(2)
+  for l in letters:
+    url = baseurl.format(letter = l, month = monthvar, year = monthyear[0])
+    urls_to_visit.append(url)
 
 ##
 # Cycles through all the urls created
@@ -38,39 +36,52 @@ for monthyear in month_array:
 #   * add detail page info for each person
 #   * don't grab the table headers
 
-for url in urls_to_visit:
-   print url
+for url in urls_to_visit[0:4]:
+  print url
+  op = mech.open(url)
+  bs = BeautifulSoup(op.read())
+  # All parolees are within the central table.
+  parolee_table = bs.find('table', class_ = "intv")
+  # Splitting out into one line per parolee.
+  try:
+    parolee_tr = parolee_table.find_all('tr')
+    print parolee_tr
+    for pl in parolee_line:
+      pl_list = []
+      for td in pl.find_all(['td']):
+        pl_list.append(td.string.strip())
+      parolees.append(pl_list)
+  except:
+    continue
 
-   op = mech.open(url)
+for parolee in parolees:
+  if not parolee:
+    parolees.remove(parolee)
+  else:
+    dp = mech.open(detailurl.format(number = parolee[1]))
+    dbs = BeautifulSoup(dp.read())
+    detail_table = dbs.find('table', class_ = "detl")
+    for tr in detail_table:
+      detail = tr.getText().split(":")
+      if "nysid" in detail[0].lower() or "name" in detail[0].lower():
+        continue
+      elif "din" in detail[0].lower():
+        parolee.append(detail[1].strip().replace(u'\xa0', u'')[0:2])
+      else:
+        parolee.append(detail[1].strip().replace(u'\xa0', u''))
+    print parolee
 
-   bs = BeautifulSoup(op.read())
+#####
+# TODO
+# * Get crime info
+# * split names
 
-   # All parolees are within the central table.
-   parolee_table = bs.find('table', class_ = "intv")
-
-   # Splitting out into one line per parolee.
-   try:
-      parolee_line = parolee_table.find_all('tr')
-
-      for pl in parolee_line:
-         pl_list = []
-
-         # Get all info
-         for td in pl.find_all(['td', 'th']):
-            pl_list.append(td.string.strip())
-         parolees.append(pl_list)
-
-         # Get details page url
-         parolee_url = detailurl.format(number = pl_list[1])
-         parolee_urls.append(parolee_url)
-   except:
-      continue
-
-##
-# Clean up
-# TODO:
-#   * drop names column
-#   * get first 2 digits of DIN number for year of entry
+headers = ["INMATE NAME", "NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
+           "HOUSING OR INTERVIEW FACILITY", "PAROLE BOARD INTERVIEW DATE",
+          "PAROLE BOARD INTERVIEW TYPE", "INTERVIEW DECISION", "Year of Entry",
+          "Aggregated Minimum Sentence", "Aggregated Maximum Sentence", "Release Date",
+          "Release Type", "Housing/Release Facility", "Parole Eligibility Date", "Conditional Release Date",
+          "Maximum Expiration Date", "Parole ME Date", "Post Release Supervision ME Date", "Parole Board Discharge Date"]
 
 with open('output.csv', 'a') as csvfile:
    w = csv.writer(csvfile, delimiter=',')

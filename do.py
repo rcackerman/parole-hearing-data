@@ -36,7 +36,7 @@ for monthyear in month_array:
 #   * add detail page info for each person
 #   * don't grab the table headers
 
-for url in urls_to_visit[0]:
+for url in urls_to_visit:
   print url
   op = mech.open(url)
   bs = BeautifulSoup(op.read())
@@ -45,16 +45,17 @@ for url in urls_to_visit[0]:
   # Splitting out into one line per parolee.
   try:
     parolee_tr = parolee_table.find_all('tr')
-    print parolee_tr
-    for pl in parolee_line:
+    # print parolee_tr
+    for pl in parolee_tr:
       pl_list = []
-      for td in pl.find_all(['td']):
+      for td in pl.find_all('td'):
         pl_list.append(td.string.strip())
       parolees.append(pl_list)
   except:
     continue
 
 for parolee in parolees:
+  print parolee[0:1]
   if not parolee:
     parolees.remove(parolee)
   else:
@@ -72,7 +73,8 @@ for parolee in parolees:
         parolee.append(detail[1].strip().replace(u'\xa0', u''))
     for c in crimes:
       parolee.append(c.string.strip())
-    print parolee
+
+
 
 #####
 # TODO

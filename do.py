@@ -13,7 +13,7 @@ urls_to_visit = []
 parolees = []
 parolee_urls = []
 
-# The parole calendar goes 12 months back
+# The parole calendar goes 24 months back
 # and 6 months forward (add an extra month to account for current month)
 today = time.localtime()
 month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(-24, 7)]
@@ -36,7 +36,7 @@ for monthyear in month_array:
 #   * add detail page info for each person
 #   * don't grab the table headers
 
-for url in urls_to_visit[0:4]:
+for url in urls_to_visit[0]:
   print url
   op = mech.open(url)
   bs = BeautifulSoup(op.read())
@@ -61,6 +61,7 @@ for parolee in parolees:
     dp = mech.open(detailurl.format(number = parolee[1]))
     dbs = BeautifulSoup(dp.read())
     detail_table = dbs.find('table', class_ = "detl")
+    crimes = dbs.find('table', class_ = "intv").find_all('td')
     for tr in detail_table:
       detail = tr.getText().split(":")
       if "nysid" in detail[0].lower() or "name" in detail[0].lower():
@@ -69,6 +70,8 @@ for parolee in parolees:
         parolee.append(detail[1].strip().replace(u'\xa0', u'')[0:2])
       else:
         parolee.append(detail[1].strip().replace(u'\xa0', u''))
+    for c in crimes:
+      parolee.append(c.string.strip())
     print parolee
 
 #####

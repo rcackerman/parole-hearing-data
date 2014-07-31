@@ -38,7 +38,7 @@ for monthyear in month_array:
 
 for url in urls_to_visit:
   print url
-  op = mech.open(url)
+  op = mech.open(url, timeout=5)
   bs = BeautifulSoup(op.read())
   # All parolees are within the central table.
   parolee_table = bs.find('table', class_ = "intv")
@@ -53,13 +53,14 @@ for url in urls_to_visit:
       parolees.append(pl_list)
   except:
     continue
+  time.sleep(1)
 
 for parolee in parolees:
   print parolee[0:1]
   if not parolee:
     parolees.remove(parolee)
   else:
-    dp = mech.open(detailurl.format(number = parolee[1]))
+    dp = mech.open(detailurl.format(number = parolee[1]), timeout=5)
     dbs = BeautifulSoup(dp.read())
     detail_table = dbs.find('table', class_ = "detl")
     crimes = dbs.find('table', class_ = "intv").find_all('td')
@@ -73,6 +74,7 @@ for parolee in parolees:
         parolee.append(detail[1].strip().replace(u'\xa0', u''))
     for c in crimes:
       parolee.append(c.string.strip())
+  time.sleep(1)
 
 
 

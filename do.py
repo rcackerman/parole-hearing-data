@@ -2,7 +2,8 @@
 # Gets all pages we need to scrape
 #--------------
 
-import mechanize
+# import mechanize
+import requests
 from bs4 import BeautifulSoup
 import re, time, csv, sys
 from string import ascii_uppercase
@@ -19,7 +20,7 @@ today = time.localtime()
 month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(-24, 7)]
 letters = list(ascii_uppercase)
 
-mech = mechanize.Browser()
+# mech = mechanize.Browser()
 # mech.set_handle_robots(False)
 
 for monthyear in month_array:
@@ -38,8 +39,13 @@ for monthyear in month_array:
 
 for url in urls_to_visit:
   print url
-  op = mech.open(url, timeout=5)
-  bs = BeautifulSoup(op.read())
+  # op = mech.open(url, timeout=5)
+  # bs = BeautifulSoup(op.read())
+  r = requests.get(url)
+  if r.status_code != 200:
+    print "Error:", r.text
+    continue
+  bs = BeautifulSoup(r.text)
   # All parolees are within the central table.
   parolee_table = bs.find('table', class_ = "intv")
   # Splitting out into one line per parolee.
@@ -60,8 +66,13 @@ for parolee in parolees:
   if not parolee:
     parolees.remove(parolee)
   else:
-    dp = mech.open(detailurl.format(number = parolee[1]), timeout=5)
-    dbs = BeautifulSoup(dp.read())
+    # dp = mech.open(detailurl.format(number = parolee[1]), timeout=5)
+    # dbs = BeautifulSoup(dp.read())
+    r = requests.get(detailurl.format(number = parolee[1]))
+    if r.status_code != 200:
+      print "Error:", r.text
+      continue
+    dbs = BeautifulSoup(r.text)
     detail_table = dbs.find('table', class_ = "detl")
     crimes = dbs.find('table', class_ = "intv").find_all('td')
     for tr in detail_table:

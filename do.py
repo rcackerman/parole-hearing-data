@@ -78,14 +78,15 @@ for parolee in parolees:
         print parolee[1] + ' did not work'
         continue
 
-
+#And now we clean
+for parolee in parolees:
+  parolees = parolee[1:len(parolee)]
 
 #####
 # TODO
 # * Get crime info
-# * split names
 
-headers = ["INMATE NAME", "NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
+headers = ["NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
            "HOUSING OR INTERVIEW FACILITY", "PAROLE BOARD INTERVIEW DATE",
           "PAROLE BOARD INTERVIEW TYPE", "INTERVIEW DECISION", "Year of Entry",
           "Aggregated Minimum Sentence", "Aggregated Maximum Sentence", "Release Date",

@@ -80,7 +80,8 @@ for parolee in parolees:
 
 #And now we clean
 for parolee in parolees:
-  parolees = parolee[1:len(parolee)]
+  parolee = parolee[1:len(parolee)]
+  
 
 #####
 # TODO

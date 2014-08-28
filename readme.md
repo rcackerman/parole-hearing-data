@@ -25,6 +25,8 @@ $ pip install -r requirements.txt
 $ python do.py
 ```
 
+The results of the scraper will be in `output.csv`.
+
 ## Team
 
 The Parole Hearing Data Project was created by Nikki Zeichner, a New York City-based criminal defense attorney developing multimedia public projects that explore the U.S. criminal justice system.  Her interest in examining the NYS parole board's release practices grew out of her experience representing a prisoner who had been denied release 9 times before their work together.  More of her storytelling projects can be found at the Museum of the American Prison's website.

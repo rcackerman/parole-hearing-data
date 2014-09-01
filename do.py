@@ -64,34 +64,34 @@ for parolee in parolees:
   if not parolee:
     # Some blank rows sneak in; let's skip them.
     parolees.remove(parolee)
-    continue
 
-  print detailurl.format(number = parolee[1])
-
-  # Checking if the parolee has detailed info already
-  if len(parolee) > 10:
-    pass
   else:
-    try:
-      dp = s.urlopen(detailurl.format(number = parolee[1]), timeout=5)
-      dbs = BeautifulSoup(dp)
-      detail_table = dbs.find('table', class_ = "detl")
-      crimes = dbs.find('table', class_ = "intv").find_all('td')
-      for tr in detail_table:
-        detail = tr.getText().split(":")
-        if "nysid" in detail[0].lower() or "name" in detail[0].lower():
-          continue
-        elif "din" in detail[0].lower():
-          parolee.append(detail[1].strip().replace(u'\xa0', u'')[0:2])
-        else:
-          parolee.append(detail[1].strip().replace(u'\xa0', u''))
-      for c in crimes:
-        parolee.append(c.string.strip())
-    except:
-      # Most of these errors appear to be caused by the DIN detail page not
-      # actually existing.
-      print parolee[1] + ' Could not be parsed', sys.exc_info()[0]
-      continue
+    print detailurl.format(number = parolee[1])
+
+    # Checking if the parolee has detailed info already
+    if len(parolee) > 10:
+      pass
+    else:
+      try:
+        dp = s.urlopen(detailurl.format(number = parolee[1]), timeout=5)
+        dbs = BeautifulSoup(dp)
+        detail_table = dbs.find('table', class_ = "detl")
+        crimes = dbs.find('table', class_ = "intv").find_all('td')
+        for tr in detail_table:
+          detail = tr.getText().split(":")
+          if "nysid" in detail[0].lower() or "name" in detail[0].lower():
+            continue
+          elif "din" in detail[0].lower():
+            parolee.append(detail[1].strip().replace(u'\xa0', u'')[0:2])
+          else:
+            parolee.append(detail[1].strip().replace(u'\xa0', u''))
+        for c in crimes:
+          parolee.append(c.string.strip())
+      except:
+        # Most of these errors appear to be caused by the DIN detail page not
+        # actually existing.
+        print parolee[1] + ' Could not be parsed', sys.exc_info()[0]
+        continue
 
 # And now we clean
 for parolee in parolees:

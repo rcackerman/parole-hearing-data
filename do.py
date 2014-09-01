@@ -6,7 +6,7 @@ import scrapelib
 from bs4 import BeautifulSoup
 import re, time, csv
 from string import ascii_uppercase
-import sys
+import os, sys
 
 baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
 detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
@@ -14,11 +14,31 @@ urls_to_visit = []
 parolees = []
 parolee_urls = []
 
+def output_exists(file):
+  if os.path.isfile(file):
+    return true
+  else:
+    return false
+
+def get_last_scrape_date:
+  # Get last scrape date
+  dates = []
+  with open('output.csv') as csvfile:
+    r = csv.reader(csvfile, delimiter=',')
+    i = r.fieldnames().index('Scrape Date')
+    for row in r:
+      dates.append(row[i])
+    max_date = dates.max()
+    return max_date
+
+def fill_in_the_blanks
 # The parole calendar goes 24 months back
 # and 6 months forward (add an extra month to account for current month)
-today = time.localtime()
-month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(-24, 7)]
-letters = list(ascii_uppercase)
+# We scrape every month, so only need the next 6 months
+  if output_exists('output.csv'):
+    last_scrape = get_last_scrape_date()
+    month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
+    letters = list(ascii_uppercase)
 
 s = scrapelib.Scraper(requests_per_minute=60, retry_attempts=5, retry_wait_seconds=15)
 

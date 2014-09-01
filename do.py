@@ -6,6 +6,7 @@ import scrapelib
 from bs4 import BeautifulSoup
 import re, time, csv
 from string import ascii_uppercase
+import sys
 
 baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
 detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
@@ -30,13 +31,16 @@ for monthyear in month_array:
 ##
 # Cycles through all the urls created
 # by the month, year, and letter combos
-
+# For example, all the "A"s in June 2013
+# Saves each cell by row to the parolees list.
 for url in urls_to_visit:
   print url
   op = s.urlopen(url)
   bs = BeautifulSoup(op)
+
   # All parolees are within the central table.
   parolee_table = bs.find('table', class_ = "intv")
+
   # Splitting out into one line per parolee.
   try:
     parolee_tr = parolee_table.find_all('tr')
@@ -47,15 +51,22 @@ for url in urls_to_visit:
         pl_list.append(td.string.strip())
       parolees.append(pl_list)
   except:
+    # This usually happens when there are no results
+    # (For example, no one with a last name beginning "X" in August 2012)
+    print "Unable to split parolee table by TR"
     continue
 
+
+print "Checking parolees"
 for parolee in parolees:
   if not parolee:
+    # Some blank rows sneak in; let's skip them.
     parolees.remove(parolee)
+
   else:
     print detailurl.format(number = parolee[1])
 
-    #checking if the parolee has detail info already
+    # Checking if the parolee has detailed info already
     if len(parolee) > 10:
       pass
     else:
@@ -75,13 +86,14 @@ for parolee in parolees:
         for c in crimes:
           parolee.append(c.string.strip())
       except:
-        print parolee[1] + ' did not work'
+        # Most of these errors appear to be caused by the DIN detail page not
+        # actually existing.
+        print parolee[1] + ' Could not be parsed', sys.exc_info()[0]
         continue
 
-#And now we clean
+# And now we clean
 for parolee in parolees:
   parolee = parolee[1:len(parolee)]
-  
 
 #####
 # TODO

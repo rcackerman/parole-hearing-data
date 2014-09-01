@@ -8,8 +8,6 @@ import re, time, csv
 from string import ascii_uppercase
 import sys
 
-import util
-
 baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
 detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
 urls_to_visit = []

@@ -5,7 +5,8 @@ The Parole Hearing Data Project is a repository of New York State parole hearing
  1. Records scraped from the New York State Parole Board’s website
  2. Parole hearing transcripts crowdsourced with help from attorneys, advocates and prisoners/the formerly incarcerated.
 
-So far, we have gathered 30,000+ records and formatted them for analysis. This project is in development.
+So far, we have gathered 30,000+ records and formatted them for analysis.
+Data from a sample run is included in `data.csv`. This project is in development.
 
 We are building this dataset because in New York over 10,000 parole eligible prisoners are denied release every year, and while the consequences of these decisions are costly (at $60,000 annually to incarcerate one individual, and more to incarcerate older individuals with illnesses), the process of how these determinations are made is unclear.
 
@@ -22,11 +23,11 @@ $ pip install -r requirements.txt
 **Running the scraper**
 
 ```bash
-$ python do.py
+$ python do.py > log.txt
 ```
 
-The results of the scraper will be in `output.csv`. Data from a sample run is
-included in data.csv.
+The results of the scraper will be in `output.csv`. The logs will be in
+`log.txt`.
 
 ## Team
 

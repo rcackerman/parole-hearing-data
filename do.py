@@ -4,7 +4,7 @@
 
 import scrapelib
 from bs4 import BeautifulSoup
-import re, time, csv
+import re, time, csv, datetime
 from string import ascii_uppercase
 import os, sys
 
@@ -16,29 +16,29 @@ parolee_urls = []
 
 def output_exists(file):
   if os.path.isfile(file):
-    return true
+    return True
   else:
-    return false
+    return False
 
-def get_last_scrape_date():
+def get_last_scrape_date(the_file):
   # Get last scrape date
   dates = []
-  with open('output.csv') as csvfile:
-    r = csv.reader(csvfile, delimiter=',')
-    i = r.fieldnames().index('Scrape Date')
+  with open(the_file, 'rU') as csvfile:
+    r = csv.DictReader(csvfile, delimiter=',', quotechar='"')
+    i = r.fieldnames.index('Scrape_Date')
     for row in r:
-      dates.append(row[i])
-    max_date = dates.max()
-    return max_date
+      dates.append(row['Scrape_Date'])
+  max_date = max(dates)
+  return max_date
 
 def fill_in_the_blanks():
 # The parole calendar goes 24 months back
 # and 6 months forward (add an extra month to account for current month)
 # We scrape every month, so only need the next 6 months
-  if output_exists('output.csv'):
-    last_scrape = get_last_scrape_date()
-    month_array = [time.localtime(time.mktime([last_scrape.tm_year, last_scrape.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
-  else time.localtime()
+  if output_exists('data.csv'):
+    last_scrape = datetime.datetime.strptime(get_last_scrape_date('data.csv'), '%Y-%m-%d')
+    month_array = [time.localtime(time.mktime([last_scrape.year, last_scrape.month + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
+  else:
     today = time.localtime()
     month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
   letters = list(ascii_uppercase)

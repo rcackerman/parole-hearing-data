@@ -8,9 +8,8 @@ import re, time, csv, datetime
 from string import ascii_uppercase
 import os, sys
 
-baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
+s = scrapelib.Scraper(requests_per_minute=180, retry_attempts=5, retry_wait_seconds=15)
 detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
-urls_to_visit = []
 parolees = []
 parolee_urls = []
 
@@ -36,7 +35,8 @@ def fill_in_the_blanks():
 # and 6 months forward (add an extra month to account for current month)
 # We scrape every month, so only need the next 6 months
   if output_exists('data.csv'):
-    last_scrape = datetime.datetime.strptime(get_last_scrape_date('data.csv'), '%Y-%m-%d')
+    last_scrape = get_last_scrape_date('data.csv') 
+    last_scrape = datetime.datetime.strptime(last_scrape, '%Y-%M-%d')
     month_array = [time.localtime(time.mktime([last_scrape.year, last_scrape.month + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
   else:
     today = time.localtime()
@@ -44,20 +44,25 @@ def fill_in_the_blanks():
   letters = list(ascii_uppercase)
   yield month_array, letters
 
+def generate_baseurl():
+  baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
+  urls = []
+  monthsyears = fill_in_the_blanks().next()[0]
+  letters = fill_in_the_blanks().next()[1]
+  for my in monthsyears:
+    for l in letters:
+      url = baseurl.format(letter = l, month = str(my[1]).zfill(2), year = my[0])
+      urls.append(url)
+  return urls
 
-s = scrapelib.Scraper(requests_per_minute=60, retry_attempts=5, retry_wait_seconds=15)
-
-for monthyear in month_array:
-  monthvar = str(monthyear[1]).zfill(2)
-  for l in letters:
-    url = baseurl.format(letter = l, month = monthvar, year = monthyear[0])
-    urls_to_visit.append(url)
 
 ##
 # Cycles through all the urls created
 # by the month, year, and letter combos
 # For example, all the "A"s in June 2013
 # Saves each cell by row to the parolees list.
+urls_to_visit = generate_baseurl()
+
 for url in urls_to_visit:
   print url
   op = s.urlopen(url)
@@ -132,5 +137,5 @@ headers = ["NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
           "Maximum Expiration Date", "Parole ME Date", "Post Release Supervision ME Date", "Parole Board Discharge Date"]
 
 with open('output.csv', 'a') as csvfile:
-   w = csv.writer(csvfile, delimiter=',')
+   w = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_ALL)
    w.writerows(parolees)

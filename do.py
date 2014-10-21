@@ -13,6 +13,16 @@ detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}
 parolees = []
 parolee_urls = []
 
+def format_date(date):
+  if int(date) <= 50:
+    date = 2000 + int(date)
+    return date
+  elif int(date) > 50 and int(date) < 100:
+    date = 1900 + int(date)
+    return date
+  else:
+    return date
+
 def output_exists(file):
   if os.path.isfile(file):
     return True
@@ -122,20 +132,29 @@ for parolee in parolees:
         continue
 
 # And now we clean
-for parolee in parolees:
-  parolee = parolee[1:len(parolee)]
+# i = 0
+# while i <= len(parolees):
+#   parolee = parolees.pop(i)
+#   # get rid of names, which is the first item
+#   parolee = parolee[1:len(parolee)]
+#   # format dates
+#   parolee[9] = format_date(parolee[9])
+#   # add scrape date
+#   parolee.append(datetime.date.today().isoformat())
+#   i += 1
+
 
 #####
 # TODO
 # * Get crime info
 
-headers = ["NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
-           "HOUSING OR INTERVIEW FACILITY", "PAROLE BOARD INTERVIEW DATE",
-          "PAROLE BOARD INTERVIEW TYPE", "INTERVIEW DECISION", "Year of Entry",
-          "Aggregated Minimum Sentence", "Aggregated Maximum Sentence", "Release Date",
-          "Release Type", "Housing/Release Facility", "Parole Eligibility Date", "Conditional Release Date",
-          "Maximum Expiration Date", "Parole ME Date", "Post Release Supervision ME Date", "Parole Board Discharge Date"]
+# headers = ["NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
+#            "HOUSING OR INTERVIEW FACILITY", "PAROLE BOARD INTERVIEW DATE",
+#           "PAROLE BOARD INTERVIEW TYPE", "INTERVIEW DECISION", "Year of Entry",
+#           "Aggregated Minimum Sentence", "Aggregated Maximum Sentence", "Release Date",
+#           "Release Type", "Housing/Release Facility", "Parole Eligibility Date", "Conditional Release Date",
+#           "Maximum Expiration Date", "Parole ME Date", "Post Release Supervision ME Date", "Parole Board Discharge Date"]
 
-with open('output.csv', 'a') as csvfile:
-   w = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_ALL)
-   w.writerows(parolees)
+# with open('output.csv', 'a') as csvfile:
+#    w = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_ALL)
+#    w.writerows(parolees)

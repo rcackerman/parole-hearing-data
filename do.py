@@ -23,6 +23,10 @@ def format_date(date):
   else:
     return date
 
+def no_names(x):
+  if type(x) == list:
+    return x[1:len(x)]
+
 def output_exists(file):
   if os.path.isfile(file):
     return True
@@ -65,6 +69,13 @@ def generate_baseurl():
       urls.append(url)
   return urls
 
+def get_dict_keys(url):
+  keys = []
+  op = s.urlopen(url)
+  bs = BeautifulSoup(op)
+  keys_th = bs.find('table', class_ = 'intv').find('tr').find_all('th')
+  [keys.append(key.string) for key in keys_th]
+  return keys
 
 ##
 # Cycles through all the urls created
@@ -72,6 +83,7 @@ def generate_baseurl():
 # For example, all the "A"s in June 2013
 # Saves each cell by row to the parolees list.
 urls_to_visit = generate_baseurl()
+parolee_keys = get_dict_keys(urls_to_visit[0])
 
 for url in urls_to_visit:
   print url
@@ -85,11 +97,15 @@ for url in urls_to_visit:
   try:
     parolee_tr = parolee_table.find_all('tr')
     # print parolee_tr
-    for pl in parolee_tr:
-      pl_list = []
-      for td in pl.find_all('td'):
-        pl_list.append(td.string.strip())
-      parolees.append(pl_list)
+    for pr in parolee_tr:
+      tds = pr.find_all('td')
+      i = 0
+      while i < len(pr):
+        pl = []
+        pl[parolee_keys[i]] = tds[i].string.strip()
+        pl['scrape date'] = datetime.date.today().isoformat()
+        parolees.append(pl)
+        i += 1
   except:
     # This usually happens when there are no results
     # (For example, no one with a last name beginning "X" in August 2012)
@@ -99,19 +115,19 @@ for url in urls_to_visit:
 
 print "Checking parolees"
 for parolee in parolees:
-  if not parolee:
+  if len(parolee) <= 1:
     # Some blank rows sneak in; let's skip them.
     parolees.remove(parolee)
 
   else:
-    print detailurl.format(number = parolee[1])
+    print detailurl.format(number = parolee[2])
 
     # Checking if the parolee has detailed info already
-    if len(parolee) > 10:
+    if len(parolee) > 11:
       pass
     else:
       try:
-        dp = s.urlopen(detailurl.format(number = parolee[1]), timeout=5)
+        dp = s.urlopen(detailurl.format(number = parolee[2]), timeout=5)
         dbs = BeautifulSoup(dp)
         detail_table = dbs.find('table', class_ = "detl")
         crimes = dbs.find('table', class_ = "intv").find_all('td')
@@ -131,17 +147,12 @@ for parolee in parolees:
         print parolee[1] + ' Could not be parsed', sys.exc_info()[0]
         continue
 
-# And now we clean
-# i = 0
-# while i <= len(parolees):
-#   parolee = parolees.pop(i)
-#   # get rid of names, which is the first item
-#   parolee = parolee[1:len(parolee)]
-#   # format dates
-#   parolee[9] = format_date(parolee[9])
-#   # add scrape date
-#   parolee.append(datetime.date.today().isoformat())
-#   i += 1
+##
+# Cleaning
+
+# get rid of names
+ps = parolees
+ps = map(no_names, ps)
 
 
 #####

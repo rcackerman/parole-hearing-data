@@ -74,7 +74,7 @@ def get_dict_keys(url):
   op = s.urlopen(url)
   bs = BeautifulSoup(op)
   keys_th = bs.find('table', class_ = 'intv').find('tr').find_all('th')
-  [keys.append(key.string) for key in keys_th]
+  [keys.append(unicode(key.string)) for key in keys_th]
   return keys
 
 ##
@@ -94,23 +94,23 @@ for url in urls_to_visit:
   parolee_table = bs.find('table', class_ = "intv")
 
   # Splitting out into one line per parolee.
-  try:
-    parolee_tr = parolee_table.find_all('tr')
-    # print parolee_tr
-    for pr in parolee_tr:
-      tds = pr.find_all('td')
-      i = 0
-      while i < len(pr):
-        pl = []
-        pl[parolee_keys[i]] = tds[i].string.strip()
-        pl['scrape date'] = datetime.date.today().isoformat()
-        parolees.append(pl)
-        i += 1
-  except:
-    # This usually happens when there are no results
-    # (For example, no one with a last name beginning "X" in August 2012)
-    print "Unable to split parolee table by TR"
-    continue
+  # try:
+  parolee_tr = parolee_table.find_all('tr')
+  for pr in parolee_tr:
+    tds = pr.find_all('td')
+    i = 0
+    while i < len(tds):
+      pl = {}
+      pl[parolee_keys[i]] = tds[i].string.strip()
+      i += 1
+    pl['scrape date'] = datetime.date.today().isoformat()
+    print pl
+    parolees.append(pl)
+  # except:
+  #   # This usually happens when there are no results
+  #   # (For example, no one with a last name beginning "X" in August 2012)
+  #   print "Unable to split parolee table by TR"
+  #   continue
 
 
 print "Checking parolees"

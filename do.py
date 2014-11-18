@@ -94,23 +94,22 @@ for url in urls_to_visit:
   parolee_table = bs.find('table', class_ = "intv")
 
   # Splitting out into one line per parolee.
-  # try:
-  parolee_tr = parolee_table.find_all('tr')
-  for pr in parolee_tr:
-    tds = pr.find_all('td')
-    i = 0
-    while i < len(tds):
+  try:
+    parolee_tr = parolee_table.find_all('tr')
+    for pr in parolee_tr:
+      tds = pr.find_all('td')
+      i = 0
       pl = {}
-      pl[parolee_keys[i]] = tds[i].string.strip()
-      i += 1
-    pl['scrape date'] = datetime.date.today().isoformat()
-    print pl
-    parolees.append(pl)
-  # except:
-  #   # This usually happens when there are no results
-  #   # (For example, no one with a last name beginning "X" in August 2012)
-  #   print "Unable to split parolee table by TR"
-  #   continue
+      while i < len(tds):
+        pl[parolee_keys[i]] = tds[i].string.strip()
+        i += 1
+      pl['scrape date'] = datetime.date.today().isoformat()
+      parolees.append(pl)
+  except:
+    # This usually happens when there are no results
+    # (For example, no one with a last name beginning "X" in August 2012)
+    print "Unable to split parolee table by TR"
+    continue
 
 
 print "Checking parolees"
@@ -118,41 +117,42 @@ for parolee in parolees:
   if len(parolee) <= 1:
     # Some blank rows sneak in; let's skip them.
     parolees.remove(parolee)
-
   else:
-    print detailurl.format(number = parolee[2])
+    print detailurl.format(number = parolee['NYSID'])
 
     # Checking if the parolee has detailed info already
     if len(parolee) > 11:
       pass
     else:
       try:
-        dp = s.urlopen(detailurl.format(number = parolee[2]), timeout=5)
+        dp = s.urlopen(detailurl.format(number = parolee['NYSID']), timeout=5)
         dbs = BeautifulSoup(dp)
         detail_table = dbs.find('table', class_ = "detl")
         crimes = dbs.find('table', class_ = "intv").find_all('td')
+
         for tr in detail_table:
           detail = tr.getText().split(":")
-          if "nysid" in detail[0].lower() or "name" in detail[0].lower():
+          # we don't need to capture the nysid, name, or din again
+          if "nysid" in detail[0].lower() or "name" in detail[0].lower() or "din" in detail[0].lower():
             continue
-          elif "din" in detail[0].lower():
-            parolee.append(detail[1].strip().replace(u'\xa0', u'')[0:2])
           else:
-            parolee.append(detail[1].strip().replace(u'\xa0', u''))
+            parolee[detail[0]] = detail[1].strip().replace(u'\xa0', u'')
+
         for c in crimes:
-          parolee.append(c.string.strip())
+          parolee[c.string.strip()] = 1
+
       except:
-        # Most of these errors appear to be caused by the DIN detail page not
+        # Most of these errors appear to be caused by the detail page not
         # actually existing.
-        print parolee[1] + ' Could not be parsed', sys.exc_info()[0]
+        print parolee['NYSID'] + ' Could not be parsed', sys.exc_info()[0]
         continue
 
 ##
 # Cleaning
 
 # get rid of names
-ps = parolees
-ps = map(no_names, ps)
+#ps = parolees
+#ps = map(no_names, ps)
 
 
 #####

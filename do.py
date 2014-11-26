@@ -13,20 +13,6 @@ detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}
 parolees = []
 parolee_urls = []
 
-def format_date(date):
-  if int(date) <= 50:
-    date = 2000 + int(date)
-    return date
-  elif int(date) > 50 and int(date) < 100:
-    date = 1900 + int(date)
-    return date
-  else:
-    return date
-
-def no_names(x):
-  if type(x) == list:
-    return x[1:len(x)]
-
 def output_exists(file):
   if os.path.isfile(file):
     return True
@@ -69,7 +55,7 @@ def generate_baseurl():
       urls.append(url)
   return urls
 
-def get_dict_keys(url):
+def get_general_parolee_keys(url):
   keys = []
   op = s.urlopen(url)
   bs = BeautifulSoup(op)
@@ -77,15 +63,16 @@ def get_dict_keys(url):
   [keys.append(unicode(key.string)) for key in keys_th]
   return keys
 
+
 ##
 # Cycles through all the urls created
 # by the month, year, and letter combos
 # For example, all the "A"s in June 2013
 # Saves each cell by row to the parolees list.
 urls_to_visit = generate_baseurl()
-parolee_keys = get_dict_keys(urls_to_visit[0])
+parolee_keys = get_general_parolee_keys(urls_to_visit[0])
 
-for url in urls_to_visit:
+for url in urls_to_visit[0:5]:
   print url
   op = s.urlopen(url)
   bs = BeautifulSoup(op)
@@ -111,7 +98,6 @@ for url in urls_to_visit:
     print "Unable to split parolee table by TR"
     continue
 
-
 print "Checking parolees"
 for parolee in parolees:
   if len(parolee) <= 1:
@@ -128,7 +114,9 @@ for parolee in parolees:
         dp = s.urlopen(detailurl.format(number = parolee['NYSID']), timeout=5)
         dbs = BeautifulSoup(dp)
         detail_table = dbs.find('table', class_ = "detl")
-        crimes = dbs.find('table', class_ = "intv").find_all('td')
+        crimes = dbs.find('table', class_ = "intv").find_all('tr')
+        crime_titles = ["Crime {} - " + unicode(th.string) for th in dbs.find('table', class_ = "intv").find_all('th')]
+        
 
         for tr in detail_table:
           detail = tr.getText().split(":")
@@ -138,8 +126,14 @@ for parolee in parolees:
           else:
             parolee[detail[0]] = detail[1].strip().replace(u'\xa0', u'')
 
-        for c in crimes:
-          parolee[c.string.strip()] = 1
+        a = 1
+        for c in crimes[1:len(crimes)]:
+          c_t = [ct.format(a) for ct in crime_titles]
+          i = 0
+          while i < len(c):
+            parolee[c_t[i]] = c.find_all('td')[i].string.strip()
+            i += 1
+          a += 1
 
       except:
         # Most of these errors appear to be caused by the detail page not
@@ -147,17 +141,6 @@ for parolee in parolees:
         print parolee['NYSID'] + ' Could not be parsed', sys.exc_info()[0]
         continue
 
-##
-# Cleaning
-
-# get rid of names
-#ps = parolees
-#ps = map(no_names, ps)
-
-
-#####
-# TODO
-# * Get crime info
 
 # headers = ["NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
 #            "HOUSING OR INTERVIEW FACILITY", "PAROLE BOARD INTERVIEW DATE",

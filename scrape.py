@@ -63,6 +63,10 @@ def get_general_parolee_keys(url):
   [keys.append(unicode(key.string)) for key in keys_th]
   return keys
 
+def get_headers(list_of_dicts):
+  all_keys = [l.keys() for l in list_of_dicts]
+  return set().union(*all_keys)
+
 
 ##
 # Cycles through all the urls created
@@ -98,7 +102,7 @@ for url in urls_to_visit[0:5]:
     print "Unable to split parolee table by TR"
     continue
 
-print "Checking parolees"
+print "Scraping parolees"
 for parolee in parolees:
   if len(parolee) <= 1:
     # Some blank rows sneak in; let's skip them.
@@ -142,13 +146,12 @@ for parolee in parolees:
         continue
 
 
-# headers = ["NYSID", "DIN", "SEX", "BIRTH DATE",  "RACE / ETHNICITY",
-#            "HOUSING OR INTERVIEW FACILITY", "PAROLE BOARD INTERVIEW DATE",
-#           "PAROLE BOARD INTERVIEW TYPE", "INTERVIEW DECISION", "Year of Entry",
-#           "Aggregated Minimum Sentence", "Aggregated Maximum Sentence", "Release Date",
-#           "Release Type", "Housing/Release Facility", "Parole Eligibility Date", "Conditional Release Date",
-#           "Maximum Expiration Date", "Parole ME Date", "Post Release Supervision ME Date", "Parole Board Discharge Date"]
+##
+# Save to CSV
 
-# with open('output.csv', 'a') as csvfile:
-#    w = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_ALL)
-#    w.writerows(parolees)
+headers = get_headers(parolees)
+
+with open('output.csv', 'a') as csvfile:
+   w = csv.DictWriter(csvfile, delimiter=',', quoting=csv.QUOTE_ALL, fieldnames = headers)
+   w.writeheader()
+   w.writerows(parolees)

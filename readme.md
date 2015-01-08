@@ -23,7 +23,7 @@ $ pip install -r requirements.txt
 **Running the scraper**
 
 ```bash
-$ python do.py > log.txt
+$ python scrape.py > log.txt
 ```
 
 The results of the scraper will be in `output.csv`. The logs will be in

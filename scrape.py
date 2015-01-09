@@ -12,6 +12,7 @@ s = scrapelib.Scraper(requests_per_minute=180, retry_attempts=5, retry_wait_seco
 detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
 parolees = []
 parolee_urls = []
+scrape_date = datetime.date.today().isoformat()
 
 def output_exists(file):
   if os.path.isfile(file):
@@ -82,24 +83,21 @@ for url in urls_to_visit:
 
   # All parolees are within the central table.
   parolee_table = bs.find('table', class_ = "intv")
+  if not parolee_table:
+    continue
 
   # Splitting out into one line per parolee.
-  try:
-    parolee_tr = parolee_table.find_all('tr')
-    for pr in parolee_tr:
-      tds = pr.find_all('td')
-      i = 0
-      pl = {}
-      while i < len(tds):
-        pl[parolee_keys[i]] = tds[i].string.strip()
-        i += 1
-      pl['scrape date'] = datetime.date.today().isoformat()
-      parolees.append(pl)
-  except:
-    # This usually happens when there are no results
-    # (For example, no one with a last name beginning "X" in August 2012)
-    print "Unable to split parolee table by TR"
-    continue
+  parolee_tr = parolee_table.find_all('tr')
+  for pr in parolee_tr:
+    tds = pr.find_all('td')
+    if not tds:
+      continue
+    pl = {}
+    for i, td in enumerate(tds):
+      pl[parolee_keys[i]] = tds[i].string.strip()
+    pl['scrape date'] = scrape_date
+    parolees.append(pl)
+
 
 print "Scraping parolees"
 for parolee in parolees:

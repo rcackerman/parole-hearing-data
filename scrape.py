@@ -75,7 +75,7 @@ def get_headers(list_of_dicts):
 urls_to_visit = generate_baseurl()
 parolee_keys = get_general_parolee_keys(urls_to_visit[0])
 
-for url in urls_to_visit[0:5]:
+for url in urls_to_visit:
   print url
   op = s.urlopen(url)
   bs = BeautifulSoup(op)
@@ -119,7 +119,6 @@ for parolee in parolees:
         detail_table = dbs.find('table', class_ = "detl")
         crimes = dbs.find('table', class_ = "intv").find_all('tr')
         crime_titles = ["Crime {} - " + unicode(th.string) for th in dbs.find('table', class_ = "intv").find_all('th')]
-        
 
         for tr in detail_table:
           detail = tr.getText().split(":")

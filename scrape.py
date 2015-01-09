@@ -41,14 +41,13 @@ def fill_in_the_blanks():
   else:
     today = time.localtime()
     month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
-  letters = list(ascii_uppercase)
-  yield month_array, letters
+  return month_array
 
 def generate_baseurl():
   baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
   urls = []
-  monthsyears = fill_in_the_blanks().next()[0]
-  letters = fill_in_the_blanks().next()[1]
+  monthsyears = fill_in_the_blanks()
+  letters = list(ascii_uppercase)
   for my in monthsyears:
     for l in letters:
       url = baseurl.format(letter = l, month = str(my[1]).zfill(2), year = my[0])

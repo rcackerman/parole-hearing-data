@@ -1,153 +1,176 @@
-#--------------
-# Gets all pages we need to scrape
-#--------------
+"""
+Scrape all parole hearing data for NYS.
+"""
 
+import csv
 import scrapelib
+import sys
 from bs4 import BeautifulSoup
-import re, time, csv, datetime
 from string import ascii_uppercase
-import os, sys
+from time import localtime, mktime
 
-s = scrapelib.Scraper(requests_per_minute=180, retry_attempts=5, retry_wait_seconds=15)
-detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
-parolees = []
-parolee_urls = []
-scrape_date = datetime.date.today().isoformat()
+ROOT_URL = 'http://161.11.133.89/ParoleBoardCalendar'
+DETAIL_URL = ROOT_URL + '/details.asp?nysid={number}'
+INTERVIEW_URL = ROOT_URL + '/interviews.asp?name={letter}&month={month}&year={year}'
 
-def output_exists(file):
-  if os.path.isfile(file):
-    return True
-  else:
-    return False
 
-def get_last_scrape_date(the_file):
-  # Get last scrape date
-  dates = []
-  with open(the_file, 'rU') as csvfile:
-    r = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-    i = r.fieldnames.index('Scrape_Date')
-    for row in r:
-      dates.append(row['Scrape_Date'])
-  max_date = max(dates)
-  return max_date
+def get_existing_parolees(path):
+    """
+    Load in existing parole hearing data from provided path.  Turns into a
+    dict, indexed by DIN and parole board interview date.
+    """
+    parolees = {}
+    with open(path, 'rU') as csvfile:
+        for row in csv.DictReader(csvfile, delimiter=',', quotechar='"'):
+            parolees[(row[u"DIN"], row[u"PAROLE BOARD INTERVIEW DATE"])] = row
+    return parolees
 
-def fill_in_the_blanks():
-# The parole calendar goes 24 months back
-# and 6 months forward (add an extra month to account for current month)
-# We scrape every month, so only need the next 6 months
-  if output_exists('data.csv'):
-    last_scrape = get_last_scrape_date('data.csv') 
-    last_scrape = datetime.datetime.strptime(last_scrape, '%Y-%M-%d')
-    month_array = [time.localtime(time.mktime([last_scrape.year, last_scrape.month + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
-  else:
-    today = time.localtime()
-    month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
-  return month_array
 
-def generate_baseurl():
-  baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
-  urls = []
-  monthsyears = fill_in_the_blanks()
-  letters = list(ascii_uppercase)
-  for my in monthsyears:
-    for l in letters:
-      url = baseurl.format(letter = l, month = str(my[1]).zfill(2), year = my[0])
-      urls.append(url)
-  return urls
+def baseurls():
+    """
+    Provide URLs for the calendar going back 24 months and forward 6 months via
+    generator
+    """
+    today = localtime()
+    for monthdiff in xrange(-25, 7):
+        monthyear = localtime(mktime(
+            [today.tm_year, today.tm_mon + monthdiff, 1, 0, 0, 0, 0, 0, 0]))[:2]
+        for letter in ascii_uppercase:
+            yield INTERVIEW_URL.format(letter=letter,
+                                       month=str(monthyear[1]).zfill(2),
+                                       year=monthyear[0])
 
-def get_general_parolee_keys(url):
-  keys = []
-  op = s.urlopen(url)
-  bs = BeautifulSoup(op)
-  keys_th = bs.find('table', class_ = 'intv').find('tr').find_all('th')
-  [keys.append(unicode(key.string)) for key in keys_th]
-  return keys
+
+def get_general_parolee_keys(scraper, url):
+    """
+    Obtains a list of the standard parolee data keys (table headers) from the
+    specified URL.
+    """
+    soup = BeautifulSoup(scraper.urlopen(url))
+    keys_th = soup.find('table', class_='intv').find('tr').find_all('th')
+    return [unicode(key.string) for key in keys_th]
+
 
 def get_headers(list_of_dicts):
-  all_keys = [l.keys() for l in list_of_dicts]
-  return set().union(*all_keys)
+    """
+    Returns a set of every different key in a list of dicts.
+    """
+    return set([l.keys() for l in list_of_dicts])
 
 
-##
-# Cycles through all the urls created
-# by the month, year, and letter combos
-# For example, all the "A"s in June 2013
-# Saves each cell by row to the parolees list.
-urls_to_visit = generate_baseurl()
-parolee_keys = get_general_parolee_keys(urls_to_visit[0])
+def scrape_interviews(scraper):
+    """
+    Scrape all interviews.  Returns a list of parolees, with minimal data,
+    from these hearings.
+    """
+    parolees = []
+    parolee_keys = None
+    for url in baseurls():
+        sys.stderr.write(url + '\n')
 
-for url in urls_to_visit:
-  print url
-  op = s.urlopen(url)
-  bs = BeautifulSoup(op)
+        if parolee_keys is None:
+            parolee_keys = get_general_parolee_keys(scraper, url)
 
-  # All parolees are within the central table.
-  parolee_table = bs.find('table', class_ = "intv")
-  if not parolee_table:
-    continue
+        soup = BeautifulSoup(scraper.urlopen(url))
 
-  # Splitting out into one line per parolee.
-  parolee_tr = parolee_table.find_all('tr')
-  for pr in parolee_tr:
-    tds = pr.find_all('td')
-    if not tds:
-      continue
-    pl = {}
-    for i, td in enumerate(tds):
-      pl[parolee_keys[i]] = tds[i].string.strip()
-    pl['scrape date'] = scrape_date
-    parolees.append(pl)
-
-
-print "Scraping parolees"
-for parolee in parolees:
-  if len(parolee) <= 1:
-    # Some blank rows sneak in; let's skip them.
-    parolees.remove(parolee)
-  else:
-    print detailurl.format(number = parolee['NYSID'])
-
-    # Checking if the parolee has detailed info already
-    if len(parolee) > 11:
-      pass
-    else:
-      try:
-        dp = s.urlopen(detailurl.format(number = parolee['NYSID']), timeout=5)
-        dbs = BeautifulSoup(dp)
-        detail_table = dbs.find('table', class_ = "detl")
-        crimes = dbs.find('table', class_ = "intv").find_all('tr')
-        crime_titles = ["Crime {} - " + unicode(th.string) for th in dbs.find('table', class_ = "intv").find_all('th')]
-
-        for tr in detail_table:
-          detail = tr.getText().split(":")
-          # we don't need to capture the nysid, name, or din again
-          if "nysid" in detail[0].lower() or "name" in detail[0].lower() or "din" in detail[0].lower():
+        # All parolees are within the central table.
+        parolee_table = soup.find('table', class_="intv")
+        if not parolee_table:
             continue
-          else:
-            parolee[detail[0]] = detail[1].strip().replace(u'\xa0', u'')
 
-        a = 1
-        for c in crimes[1:len(crimes)]:
-          c_t = [ct.format(a) for ct in crime_titles]
-          i = 0
-          while i < len(c):
-            parolee[c_t[i]] = c.find_all('td')[i].string.strip()
-            i += 1
-          a += 1
+        # Splitting out into one line per parolee.
+        parolee_tr = parolee_table.find_all('tr')
+        for row in parolee_tr:
+            cells = row.find_all('td')
+            if not cells:
+                continue
+            parolee = {}
+            for i, cell in enumerate(cells):
+                parolee[parolee_keys[i]] = cell.string.strip()
+            parolees.append(parolee)
 
-      except:
-        # Most of these errors appear to be caused by the detail page not
-        # actually existing.
-        print parolee['NYSID'] + ' Could not be parsed', sys.exc_info()[0]
-        continue
+    return parolees
 
 
-##
-# Save to CSV
+def scrape_details(scraper, parolee_input):
+    """
+    Scrape details for specified parolees.  Returns the same list, with
+    additional data.
+    """
+    out = []
+    for existing_parolee in parolee_input:
+        parolee = existing_parolee.copy()
+        if len(parolee) <= 1:
+            # Some blank rows sneak in; let's skip them.
+            continue
 
-headers = get_headers(parolees)
+        url = DETAIL_URL.format(number=parolee['NYSID'])
+        sys.stderr.write(url + '\n')
 
-with open('output.csv', 'a') as csvfile:
-   w = csv.DictWriter(csvfile, delimiter=',', quoting=csv.QUOTE_ALL, fieldnames = headers)
-   w.writeheader()
-   w.writerows(parolees)
+        soup = BeautifulSoup(scraper.urlopen(url, timeout=5))
+        detail_table = soup.find('table', class_="detl")
+        if not detail_table:
+            continue
+
+        crimes = soup.find('table', class_="intv").find_all('tr')
+        crime_titles = [u"Crime {} - " + unicode(th.string) for th in soup.find('table', class_="intv").find_all('th')]
+
+        for row in detail_table:
+            key, value = row.getText().split(":")
+            # we don't need to capture the nysid, name, or din again
+            key = key.lower()
+            if "nysid" in key or "name" in key or "din" in key:
+                continue
+            parolee[key] = value.strip().replace(u'\xa0', u'')
+
+        for crime_num, crime in enumerate(crimes[1:]):
+            title = [ct.format(crime_num + 1) for ct in crime_titles]
+            i = 0
+            while i < len(crime):
+                parolee[title[i]] = crime.find_all('td')[i].string.strip()
+                i += 1
+
+        out.append(parolee)
+
+    return out
+
+
+def print_data(parolees):
+    """
+    Prints output data to stdout, from which it can be piped to a file.  Orders
+    by parole hearing date and DIN (order is important for version control.)
+    """
+    headers = get_headers(parolees)
+
+    parolees = sorted(parolees, key=lambda x: (x[u"PAROLE BOARD INTERVIEW DATE"], x[u"DIN"]))
+    out = csv.DictWriter(sys.stdout, delimiter=',', quoting=csv.QUOTE_ALL,
+                         fieldnames=headers)
+    out.writeheader()
+    out.writerows(parolees)
+
+
+def scrape(old_data_path):
+    """
+    Main function -- read in existing data, scrape new data, merge the two
+    sets, and save to the output location.
+    """
+    scraper = scrapelib.Scraper(requests_per_minute=180,
+                                retry_attempts=5, retry_wait_seconds=15)
+
+    if old_data_path:
+        existing_parolees = get_existing_parolees(old_data_path)
+    else:
+        existing_parolees = {}
+
+    new_parolees = scrape_interviews(scraper)
+    new_parolees = scrape_details(scraper, new_parolees)
+
+    for parolee in new_parolees:
+        key = (parolee[u"DIN"], parolee[u"PAROLE BOARD INTERVIEW DATE"])
+        existing_parolees[key] = parolee
+
+    print_data(existing_parolees.values())
+
+
+if __name__ == '__main__':
+    scrape(sys.argv[1] if len(sys.argv) > 1 else None)

@@ -25,9 +25,9 @@ def get_last_scrape_date(the_file):
   dates = []
   with open(the_file, 'rU') as csvfile:
     r = csv.DictReader(csvfile, delimiter=',', quotechar='"')
-    i = r.fieldnames.index('Scrape_Date')
+    i = r.fieldnames.index('Scrape Date')
     for row in r:
-      dates.append(row['Scrape_Date'])
+      dates.append(row['Scrape Date'])
   max_date = max(dates)
   return max_date
 

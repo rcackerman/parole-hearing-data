@@ -12,6 +12,7 @@ s = scrapelib.Scraper(requests_per_minute=180, retry_attempts=5, retry_wait_seco
 detailurl = 'http://161.11.133.89/ParoleBoardCalendar/details.asp?nysid={number}'
 parolees = []
 parolee_urls = []
+scrape_date = datetime.date.today().isoformat()
 
 def output_exists(file):
   if os.path.isfile(file):
@@ -41,14 +42,13 @@ def fill_in_the_blanks():
   else:
     today = time.localtime()
     month_array = [time.localtime(time.mktime([today.tm_year, today.tm_mon + n, 1, 0, 0, 0, 0, 0, 0]))[:2] for n in range(0, 7)]
-  letters = list(ascii_uppercase)
-  yield month_array, letters
+  return month_array
 
 def generate_baseurl():
   baseurl = 'http://161.11.133.89/ParoleBoardCalendar/interviews.asp?name={letter}&month={month}&year={year}'
   urls = []
-  monthsyears = fill_in_the_blanks().next()[0]
-  letters = fill_in_the_blanks().next()[1]
+  monthsyears = fill_in_the_blanks()
+  letters = list(ascii_uppercase)
   for my in monthsyears:
     for l in letters:
       url = baseurl.format(letter = l, month = str(my[1]).zfill(2), year = my[0])
@@ -76,31 +76,28 @@ def get_headers(list_of_dicts):
 urls_to_visit = generate_baseurl()
 parolee_keys = get_general_parolee_keys(urls_to_visit[0])
 
-for url in urls_to_visit[0:5]:
+for url in urls_to_visit:
   print url
   op = s.urlopen(url)
   bs = BeautifulSoup(op)
 
   # All parolees are within the central table.
   parolee_table = bs.find('table', class_ = "intv")
+  if not parolee_table:
+    continue
 
   # Splitting out into one line per parolee.
-  try:
-    parolee_tr = parolee_table.find_all('tr')
-    for pr in parolee_tr:
-      tds = pr.find_all('td')
-      i = 0
-      pl = {}
-      while i < len(tds):
-        pl[parolee_keys[i]] = tds[i].string.strip()
-        i += 1
-      pl['scrape date'] = datetime.date.today().isoformat()
-      parolees.append(pl)
-  except:
-    # This usually happens when there are no results
-    # (For example, no one with a last name beginning "X" in August 2012)
-    print "Unable to split parolee table by TR"
-    continue
+  parolee_tr = parolee_table.find_all('tr')
+  for pr in parolee_tr:
+    tds = pr.find_all('td')
+    if not tds:
+      continue
+    pl = {}
+    for i, td in enumerate(tds):
+      pl[parolee_keys[i]] = tds[i].string.strip()
+    pl['scrape date'] = scrape_date
+    parolees.append(pl)
+
 
 print "Scraping parolees"
 for parolee in parolees:
@@ -120,7 +117,6 @@ for parolee in parolees:
         detail_table = dbs.find('table', class_ = "detl")
         crimes = dbs.find('table', class_ = "intv").find_all('tr')
         crime_titles = ["Crime {} - " + unicode(th.string) for th in dbs.find('table', class_ = "intv").find_all('th')]
-        
 
         for tr in detail_table:
           detail = tr.getText().split(":")

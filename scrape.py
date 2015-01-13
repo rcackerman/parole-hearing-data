@@ -8,6 +8,8 @@ import sys
 from bs4 import BeautifulSoup
 from string import ascii_uppercase
 from time import localtime, mktime
+from datetime import datetime
+from dateutil import parser as dateparser
 
 ROOT_URL = 'http://161.11.133.89/ParoleBoardCalendar'
 DETAIL_URL = ROOT_URL + '/details.asp?nysid={number}'
@@ -137,6 +139,67 @@ def scrape_details(scraper, parolee_input):
     return out
 # pylint: enable=too-many-locals
 
+def reorder_headers(supplied):
+    """
+    Takes the supplied headers, and prefers the "expected" order.  Any
+    unexpected supplied headers are appended alphabetically to the end.  Any
+    expected headers not supplied are not included.
+    """
+    headers = []
+    expected = [
+        "scrape date",
+        "nysid",
+        "din",
+        "sex",
+        "birth date",
+        "race / ethnicity",
+        "housing or interview facility",
+        "parole board interview date",
+        "parole board interview type",
+        "interview decision",
+        "year of entry",
+        "aggregated minimum sentence",
+        "aggregated maximum sentence",
+        "release date",
+        "release type",
+        "housing/release facility",
+        "parole eligibility date",
+        "conditional release date",
+        "maximum expiration date",
+        "parole me date",
+        "post release supervision me date",
+        "parole board discharge date",
+        "crime 1 - crime of conviction",
+        "crime 1 - class",
+        "crime 1 - county of commitment",
+        "crime 2 - crime of conviction",
+        "crime 2 - class",
+        "crime 2 - county of commitment",
+        "crime 3 - crime of conviction",
+        "crime 3 - class",
+        "crime 3 - county of commitment",
+        "crime 4 - crime of conviction",
+        "crime 4 - class",
+        "crime 4 - county of commitment",
+        "crime 5 - crime of conviction",
+        "crime 5 - class",
+        "crime 5 - county of commitment",
+        "crime 6 - crime of conviction",
+        "crime 6 - class",
+        "crime 6 - county of commitment",
+        "crime 7 - crime of conviction",
+        "crime 7 - class",
+        "crime 7 - county of commitment",
+        "crime 8 - crime of conviction",
+        "crime 8 - class",
+        "crime 8 - county of commitment"
+    ]
+    for header in expected:
+        if header in supplied:
+            supplied.remove(header)
+            headers.append(header)
+    headers.extend(sorted(supplied))
+    return headers
 
 def print_data(parolees):
     """
@@ -144,10 +207,20 @@ def print_data(parolees):
     by parole hearing date and DIN (order is important for version control.)
     """
     headers = get_headers(parolees)
+    headers = reorder_headers(headers)
+
+    # Convert date columns to SQL-compatible date format (like "2014-10-07")
+    # when possible
+    for parolee in parolees:
+        for key, value in parolee.iteritems():
+            if "date" in key:
+                try:
+                    parolee[key] = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                except ValueError:
+                    pass
 
     parolees = sorted(parolees, key=lambda x: (x[u"parole board interview date"], x[u"din"]))
-    out = csv.DictWriter(sys.stdout, delimiter=',', quoting=csv.QUOTE_ALL,
-                         fieldnames=headers)
+    out = csv.DictWriter(sys.stdout, delimiter=',', fieldnames=headers)
     out.writeheader()
     out.writerows(parolees)
 

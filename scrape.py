@@ -32,16 +32,15 @@ def get_existing_parolees(path):
 def baseurls():
     """
     Provide URLs for the calendar going back 24 months and forward 6 months via
-    generator
+    generator.  Yields the URL, then the year and month it's for.
     """
     today = localtime()
     for monthdiff in xrange(-25, 7):
-        monthyear = localtime(mktime(
+        year, month = localtime(mktime(
             [today.tm_year, today.tm_mon + monthdiff, 1, 0, 0, 0, 0, 0, 0]))[:2]
         for letter in ascii_uppercase:
-            yield INTERVIEW_URL.format(letter=letter,
-                                       month=str(monthyear[1]).zfill(2),
-                                       year=monthyear[0])
+            yield (INTERVIEW_URL.format(letter=letter, month=str(month).zfill(2), year=year),
+                   year, month)
 
 
 def get_general_parolee_keys(scraper, url):
@@ -67,11 +66,9 @@ def scrape_interviews(scraper):
     """
     parolees = []
     parolee_keys = None
-    for url in baseurls():
-        sys.stderr.write(url + '\n')
 
-        if parolee_keys is None:
-            parolee_keys = get_general_parolee_keys(scraper, url)
+    for url, year, month in baseurls():
+        sys.stderr.write(url + '\n')
 
         soup = BeautifulSoup(scraper.urlopen(url))
 
@@ -79,6 +76,9 @@ def scrape_interviews(scraper):
         parolee_table = soup.find('table', class_="intv")
         if not parolee_table:
             continue
+
+        if parolee_keys is None:
+            parolee_keys = get_general_parolee_keys(scraper, url)
 
         # Splitting out into one line per parolee.
         parolee_tr = parolee_table.find_all('tr')
@@ -88,8 +88,13 @@ def scrape_interviews(scraper):
                 continue
             parolee = {}
             for i, cell in enumerate(cells):
-                parolee[parolee_keys[i]] = cell.string.strip()
+                parolee[parolee_keys[i].lower()] = cell.string.strip()
             parolees.append(parolee)
+
+        # Keep track of originally scheduled month/year
+        if parolee[u"parole board interview date"] == u'*':
+            parolee[u"parole board interview date"] = u'{}-{}-*'.format(
+                year, month)
 
     return parolees
 
@@ -147,14 +152,14 @@ def reorder_headers(supplied):
     """
     headers = []
     expected = [
+        "parole board interview date",
+        "din",
         "scrape date",
         "nysid",
-        "din",
         "sex",
         "birth date",
         "race / ethnicity",
         "housing or interview facility",
-        "parole board interview date",
         "parole board interview type",
         "interview decision",
         "year of entry",
@@ -242,7 +247,21 @@ def scrape(old_data_path):
     new_parolees = scrape_details(scraper, new_parolees)
 
     for parolee in new_parolees:
-        key = (parolee[u"din"], parolee[u"parole board interview date"])
+        din = parolee[u"din"]
+        interview_date = parolee[u"parole board interview date"]
+        key = (din, interview_date)
+
+        # Clear out any hearing date that corresponds to a hearing that hadn't
+        # yet happened.  This occurs because specific dates aren't set in
+        # advance -- only a month and year.  This is notated via the date
+        # "YYYY-MM-*".  However, once the interview has happened, we have
+        # a date and should replace that row.
+        scheduled_date = '-'.join(interview_date.split('-')[0:2]) + '-*'
+        scheduled_key = (din, scheduled_date)
+        if key != scheduled_key:
+            if scheduled_key in existing_parolees:
+                del existing_parolees[scheduled_key]
+
         existing_parolees[key] = parolee
 
     print_data(existing_parolees.values())

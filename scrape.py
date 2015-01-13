@@ -22,7 +22,8 @@ def get_existing_parolees(path):
     parolees = {}
     with open(path, 'rU') as csvfile:
         for row in csv.DictReader(csvfile, delimiter=',', quotechar='"'):
-            parolees[(row[u"DIN"], row[u"PAROLE BOARD INTERVIEW DATE"])] = row
+            row = dict((k.lower(), v) for k, v in row.iteritems())
+            parolees[(row[u"din"], row[u"parole board interview date"])] = row
     return parolees
 
 
@@ -54,7 +55,7 @@ def get_headers(list_of_dicts):
     """
     Returns a set of every different key in a list of dicts.
     """
-    return set([l.keys() for l in list_of_dicts])
+    return set().union(*[l.keys() for l in list_of_dicts])
 
 
 def scrape_interviews(scraper):
@@ -91,6 +92,7 @@ def scrape_interviews(scraper):
     return parolees
 
 
+# pylint: disable=too-many-locals
 def scrape_details(scraper, parolee_input):
     """
     Scrape details for specified parolees.  Returns the same list, with
@@ -103,7 +105,7 @@ def scrape_details(scraper, parolee_input):
             # Some blank rows sneak in; let's skip them.
             continue
 
-        url = DETAIL_URL.format(number=parolee['NYSID'])
+        url = DETAIL_URL.format(number=parolee['nysid'])
         sys.stderr.write(url + '\n')
 
         soup = BeautifulSoup(scraper.urlopen(url, timeout=5))
@@ -112,7 +114,8 @@ def scrape_details(scraper, parolee_input):
             continue
 
         crimes = soup.find('table', class_="intv").find_all('tr')
-        crime_titles = [u"Crime {} - " + unicode(th.string) for th in soup.find('table', class_="intv").find_all('th')]
+        crime_titles = [u"crime {} - " + unicode(th.string)
+                        for th in soup.find('table', class_="intv").find_all('th')]
 
         for row in detail_table:
             key, value = row.getText().split(":")
@@ -132,6 +135,7 @@ def scrape_details(scraper, parolee_input):
         out.append(parolee)
 
     return out
+# pylint: enable=too-many-locals
 
 
 def print_data(parolees):
@@ -141,7 +145,7 @@ def print_data(parolees):
     """
     headers = get_headers(parolees)
 
-    parolees = sorted(parolees, key=lambda x: (x[u"PAROLE BOARD INTERVIEW DATE"], x[u"DIN"]))
+    parolees = sorted(parolees, key=lambda x: (x[u"parole board interview date"], x[u"din"]))
     out = csv.DictWriter(sys.stdout, delimiter=',', quoting=csv.QUOTE_ALL,
                          fieldnames=headers)
     out.writeheader()
@@ -165,7 +169,7 @@ def scrape(old_data_path):
     new_parolees = scrape_details(scraper, new_parolees)
 
     for parolee in new_parolees:
-        key = (parolee[u"DIN"], parolee[u"PAROLE BOARD INTERVIEW DATE"])
+        key = (parolee[u"din"], parolee[u"parole board interview date"])
         existing_parolees[key] = parolee
 
     print_data(existing_parolees.values())

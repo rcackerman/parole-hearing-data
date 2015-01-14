@@ -136,7 +136,7 @@ def scrape_details(scraper, parolee_input):
             title = [ct.format(crime_num + 1) for ct in crime_titles]
             i = 0
             while i < len(crime):
-                parolee[title[i]] = crime.find_all('td')[i].string.strip()
+                parolee[title[i].lower()] = crime.find_all('td')[i].string.strip()
                 i += 1
 
         out.append(parolee)

@@ -14,6 +14,7 @@ from dateutil import parser as dateparser
 ROOT_URL = 'http://161.11.133.89/ParoleBoardCalendar'
 DETAIL_URL = ROOT_URL + '/details.asp?nysid={number}'
 INTERVIEW_URL = ROOT_URL + '/interviews.asp?name={letter}&month={month}&year={year}'
+FORBIDDEN_HEADERS = [u'inmate name']
 
 
 def get_existing_parolees(path):
@@ -24,8 +25,18 @@ def get_existing_parolees(path):
     parolees = {}
     with open(path, 'rU') as csvfile:
         for row in csv.DictReader(csvfile, delimiter=',', quotechar='"'):
-            row = dict((k.lower(), v) for k, v in row.iteritems())
-            parolees[(row[u"din"], row[u"parole board interview date"])] = row
+
+            # Ensure row is lowercased (this caused issues with legacy data)
+            lc_row = {}
+            for key, value in row.iteritems():
+                key = key.lower()
+                if value:
+                    if key in lc_row:
+                        if lc_row[key]:
+                            raise Exception("Duplicate values in similar keys")
+                    lc_row[key] = value
+
+            parolees[(row[u"din"], row[u"parole board interview date"])] = lc_row
     return parolees
 
 
@@ -150,6 +161,9 @@ def reorder_headers(supplied):
     unexpected supplied headers are appended alphabetically to the end.  Any
     expected headers not supplied are not included.
     """
+    for forbidden_header in FORBIDDEN_HEADERS:
+        if forbidden_header in supplied:
+            supplied.remove(forbidden_header)
     headers = []
     expected = [
         "parole board interview date",
@@ -218,14 +232,19 @@ def print_data(parolees):
     # when possible
     for parolee in parolees:
         for key, value in parolee.iteritems():
+            if "inmate name" in key:
+                continue
             if "date" in key:
                 try:
                     parolee[key] = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
                 except ValueError:
                     pass
+        if 'scrape date' not in parolee:
+            parolee['scrape date'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
 
     parolees = sorted(parolees, key=lambda x: (x[u"parole board interview date"], x[u"din"]))
-    out = csv.DictWriter(sys.stdout, delimiter=',', fieldnames=headers)
+    out = csv.DictWriter(sys.stdout, extrasaction='ignore',
+                         delimiter=',', fieldnames=headers)
     out.writeheader()
     out.writerows(parolees)
 

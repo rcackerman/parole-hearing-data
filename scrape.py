@@ -234,11 +234,11 @@ def print_data(parolees):
         for key, value in parolee.iteritems():
             if "inmate name" in key:
                 continue
-            if "date" in key:
+            if "date" in key and value:
                 try:
                     parolee[key] = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
                 except ValueError:
-                    pass
+                    parolee[key] = value
         if 'scrape date' not in parolee:
             parolee['scrape date'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
 

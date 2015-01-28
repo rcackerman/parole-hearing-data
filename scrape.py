@@ -94,6 +94,7 @@ def get_headers(list_of_dicts):
     return set().union(*[l.keys() for l in list_of_dicts])
 
 
+# pylint: disable=too-many-locals
 def scrape_interviews(scraper):
     """
     Scrape all interviews.  Returns a list of parolees, with minimal data,
@@ -123,7 +124,14 @@ def scrape_interviews(scraper):
                 continue
             parolee = {}
             for i, cell in enumerate(cells):
-                parolee[parolee_keys[i].lower()] = cell.string.strip()
+                key = parolee_keys[i].lower()
+                value = cell.string.strip()
+                if "date" in key and value:
+                    try:
+                        value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                    except ValueError:
+                        pass
+                parolee[key] = value
             parolees.append(parolee)
 
         # Keep track of originally scheduled month/year
@@ -132,6 +140,7 @@ def scrape_interviews(scraper):
                 year, month)
 
     return parolees
+# pylint: enable=too-many-locals
 
 
 # pylint: disable=too-many-locals
@@ -165,6 +174,11 @@ def scrape_details(scraper, parolee_input):
             key = key.lower()
             if "nysid" in key or "name" in key or "din" in key:
                 continue
+            if "date" in key and value:
+                try:
+                    value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                except ValueError:
+                    pass
             parolee[key] = value.strip().replace(u'\xa0', u'')
 
         for crime_num, crime in enumerate(crimes[1:]):

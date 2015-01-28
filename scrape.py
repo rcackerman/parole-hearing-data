@@ -63,6 +63,30 @@ def get_general_parolee_keys(scraper, url):
     keys_th = soup.find('table', class_='intv').find('tr').find_all('th')
     return [unicode(key.string) for key in keys_th]
 
+
+def fix_defective_sentence(sentence):
+    """
+    Most of the sentences in existing data were erroneously converted from
+    "NN-NN" to "Month-NN" or "NN-Month", for example "03-00" to "Mar-00".  This
+    fixes these mistakes.
+    """
+    if not sentence:
+        return sentence
+    sentence = sentence.split('-')
+    month2num = {"jan": "01", "feb": "02", "mar": "03", "apr": "04",
+                 "may": "05", "jun": "06", "jul": "07", "aug": "08",
+                 "sep": "09", "oct": "10", "nov": "11", "dec": "12"}
+    for i, val in enumerate(sentence):
+        sentence[i] = month2num.get(val.lower(), ('00' + val)[-2:])
+    try:
+        # sometimes the min/max is flipped.
+        if int(sentence[0]) > int(sentence[1]) and int(sentence[1]) != 0:
+            sentence = [sentence[1], sentence[0]]
+    except ValueError:
+        pass
+    return '-'.join(sentence)
+
+
 def get_headers(list_of_dicts):
     """
     Returns a set of every different key in a list of dicts.
@@ -234,11 +258,13 @@ def print_data(parolees):
         for key, value in parolee.iteritems():
             if "inmate name" in key:
                 continue
-            if "date" in key and value:
+            if "date" in key.lower() and value:
                 try:
                     parolee[key] = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
                 except ValueError:
                     parolee[key] = value
+            elif "sentence" in key.lower():
+                parolee[key] = fix_defective_sentence(value)
         if 'scrape date' not in parolee:
             parolee['scrape date'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
 

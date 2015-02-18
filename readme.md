@@ -23,11 +23,11 @@ $ pip install -r requirements.txt
 **Running the scraper**
 
 ```bash
-$ python scrape.py > log.txt
+python scrape.py input.csv > output.csv 2>errors.txt
 ```
 
-The results of the scraper will be in `output.csv`. The logs will be in
-`log.txt`.
+The results of the scraper will be in `output.csv`. Errors will be in
+`errors.txt`.
 
 ## Team
 

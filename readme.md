@@ -22,12 +22,16 @@ $ pip install -r requirements.txt
 
 **Running the scraper**
 
+To run the scraper, execute the following python in the base directory of this
+repo.
+
 ```bash
-python scrape.py input.csv > output.csv 2>errors.txt
+python scrape.py data.csv > output.csv 2>log.txt &
 ```
 
-The results of the scraper will be in `output.csv`. Errors will be in
-`errors.txt`.
+The results of the scraper will be in `output.csv`. Scraper logs will be in
+`log.txt`.  The scraper will run in the background, and use the existing
+`data.csv` as a source of historical data.
 
 ## Team
 

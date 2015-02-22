@@ -13,6 +13,11 @@ def format_date(date):
   else:
     return date
 
+def get_year_of_entry(parolee):
+  year_of_entry = format_date(parolee['din'][0:2])
+  parolee['year of entry'] = year_of_entry
+  return parolee
+
 def set_security_level(parolee):
   """
   Takes a dictionary, finds the facility keys,

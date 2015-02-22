@@ -1,5 +1,5 @@
 .env
 .DS_Store
-.pyc
-.swp
+*.pyc
+*.swp
 output.csv

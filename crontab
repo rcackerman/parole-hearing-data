@@ -1,0 +1,1 @@
+0 0 * * * cd /path/to/parole-hearing && ./run.sh

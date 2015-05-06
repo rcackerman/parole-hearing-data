@@ -5,6 +5,7 @@ Scrape all parole hearing data for NYS.
 import csv
 import scrapelib
 import sys
+import argparse
 from bs4 import BeautifulSoup
 from string import ascii_uppercase
 from time import localtime, mktime
@@ -289,7 +290,7 @@ def print_data(parolees):
     out.writerows(parolees)
 
 
-def scrape(old_data_path):
+def scrape(old_data_path, no_download):
     """
     Main function -- read in existing data, scrape new data, merge the two
     sets, and save to the output location.
@@ -302,8 +303,11 @@ def scrape(old_data_path):
     else:
         existing_parolees = {}
 
-    new_parolees = scrape_interviews(scraper)
-    new_parolees = scrape_details(scraper, new_parolees)
+    if no_download:
+        new_parolees = []
+    else:
+        new_parolees = scrape_interviews(scraper)
+        new_parolees = scrape_details(scraper, new_parolees)
 
     for parolee in new_parolees:
         din = parolee[u"din"]
@@ -327,4 +331,10 @@ def scrape(old_data_path):
 
 
 if __name__ == '__main__':
-    scrape(sys.argv[1] if len(sys.argv) > 1 else None)
+    PARSER = argparse.ArgumentParser()
+    PARSER.add_argument('input', help=u"Path to input data", nargs='?')
+    PARSER.add_argument('-n', '--no-download', help=u"Don't download anything"
+                        " new, simply re-process input data.",
+                        action='store_true')
+    ARGS = PARSER.parse_args()
+    scrape(ARGS.input, ARGS.no_download)

@@ -1,5 +1,7 @@
 import re, time, csv, datetime
 import os, sys
+import prison_list
+from scrape import get_existing_parolees 
 
 def format_date(date):
   if int(date) <= 50:
@@ -11,22 +13,51 @@ def format_date(date):
   else:
     return date
 
-def no_names(x):
-  if type(x) == list:
-    return x[1:len(x)]
+def get_year_of_entry(parolee):
+  year_of_entry = format_date(parolee['din'][0:2])
+  parolee['year of entry'] = year_of_entry
+  return parolee
 
-parolees = []
+def set_security_level(parolee):
+  """
+  Takes a dictionary, finds the facility keys,
+  and creates a key value pair with the security for that facility.
+  """
 
-with open('output2.csv', 'r') as csvfile:
-  dreader = csv.DictReader(csvfile)
-  for p in dreader:
-    parolees.append(p)
+  h_i_facility = parolee['housing or interview facility']
+  h_r_facility = parolee['housing/release facility']
 
-parolees = 
+  h_i_sec_level = prison_list.PRISONS[h_i_facility]
+  h_r_sec_level = prison_list.PRISONS[h_r_facility]
 
-##
-# Cleaning
+  parolee['housing/interview facility security level'] = h_i_sec_level
+  parolee['housing/release facility security level'] = h_r_sec_level
+  return parolee
 
-# get rid of names
-ps = parolees
-ps = map(no_names, ps)
+
+def simplify_outcomes(parolee):
+  """
+  Takes a parolee, finds the outcome,
+  and creates a key value pair with a simplified outcome.
+  """
+  
+  decisions = {
+      'ODOP': 'release',
+      'PAROLED': 'release',
+      'GRANTED': 'release',
+      'REINSTATE': 'release',
+      'OPEN DATE': 'release',
+      'NO SUSREV': 'release',
+      'DENIED': 'denial',
+      'NOT GRANTD': 'denial',
+      'M V NO S': 'denial',
+      'M V SUS': 'denial',
+      'SUST-REV': 'denial',
+      'RCND&HOLD': 'ambiguous',
+      'RCND&RELSE': 'ambiguous',
+      'OR EARLIER': 'ambiguous'
+      }
+
+  parolee_decision = parolee['interview decision']
+  parolee['interview decision category'] = decisions[parolee_decision]
+  return parolee

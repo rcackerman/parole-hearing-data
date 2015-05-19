@@ -130,7 +130,7 @@ def scrape_interviews(scraper):
                 if "date" in key and value:
                     try:
                         value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
-                    except ValueError:
+                    except (ValueError, TypeError):
                         pass
                 parolee[key] = value
             parolees.append(parolee)
@@ -178,7 +178,7 @@ def scrape_details(scraper, parolee_input):
             if "date" in key and value:
                 try:
                     value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
-                except ValueError:
+                except (ValueError, TypeError):
                     pass
             parolee[key] = value.strip().replace(u'\xa0', u'')
 
@@ -276,7 +276,7 @@ def print_data(parolees):
             if "date" in key.lower() and value:
                 try:
                     parolee[key] = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
-                except ValueError:
+                except (ValueError, TypeError):
                     parolee[key] = value
             elif "sentence" in key.lower():
                 parolee[key] = fix_defective_sentence(value)

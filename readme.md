@@ -1,16 +1,16 @@
 #Parole Hearing Data
 
-The Parole Hearing Data Project is a repository of New York State parole hearing data based on:
+### What is the Parole Hearing Data Project?
 
- 1. Records scraped from the New York State Parole Board’s website
- 2. Parole hearing transcripts crowdsourced with help from attorneys, advocates and prisoners/the formerly incarcerated.
+The Parole Hearing Data Project pulls records from the <a href= "https://www.parole.ny.gov/calendar.html">New York State Parole Board’s Interview Calendar </a> and dumps them into a spreadsheet, which grows every month as the parole board updates the calendar by adding newly scheduled hearings and newly issued determinations.  The goal of this project is to enable researchers to analyze this data and better understand patterns within parole hearing determinations within New York State.
 
-So far, we have gathered 30,000+ records and formatted them for analysis.
 Data from a sample run is included in `data.csv`. This project is in development.
 
-We are building this dataset because in New York over 10,000 parole eligible prisoners are denied release every year, and while the consequences of these decisions are costly (at $60,000 annually to incarcerate one individual, and more to incarcerate older individuals with illnesses), the process of how these determinations are made is unclear.
+### Why are we working on this?
 
-A former parole commissioner stated recently that “[t]he Parole Board process is broken, terribly broken." By gathering substantial data about these determinations, we hope to enable data-driven research that will help identify existing problems and position decision makers well to solve them.
+Because in New York over 10,000 parole eligible prisoners are denied release every year based on the discretion of a small number of parole commissioners. The consequences of these denials have very real social and financial costs: families remain separated for periods that are arguably longer than necessary, incarcerated individuals who have changed their lives lose hope in a better future, millions of dollars are spent to imprison men and women who have been determined as posing a low risk to society were they to be released (in New York it costs $60,000 annually to incarcerate one individual, and more to incarcerate older individuals with illnesses). 
+
+When we began this project, we wanted to see if we could understand better what the parole board's deicison making patterns were. Since then, we've learned through feedback from academic and nonprofit researchers just how hard it has been to actually analyze the data that the parole board actually publishes without it being reformatted in this way. We're excited for this work to be used and for new insights to result from researchers and criminal justice experts using this project as a resource.
 
 ### Setup and run
 

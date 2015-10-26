@@ -43,9 +43,7 @@ in your system by adapting the line and pasting it in to `crontab -e`.
 
 ## Team
 
-The Parole Hearing Data Project was created by Nikki Zeichner, a New York City-based criminal defense attorney developing multimedia public projects that explore the U.S. criminal justice system.  Her interest in examining the NYS parole board's release practices grew out of her experience representing a prisoner who had been denied release 9 times before their work together.  More of her storytelling projects can be found at the Museum of the American Prison's website.
-
-Scrapers by Rebecca Ackerman and John Krauss (based on earlier code by R. Luke DuBois and Annie Waldman).
+The Parole Hearing Data Project was conceived of by <b>Nikki Zeichner</b>, a lawyer, who became interested in this subject matter after representing an incarcerated man in his 10th hearing in front of the New York State parole board. <b>Rebecca Ackerman</b> (<a href="casecommons.org">Case Commons</a>) and <b>John Krauss</b> (<a href= "thegovlab.org">The GovLab @ NYU</a>) created and continue to work on the scrapers (based on earlier code by R. Luke DuBois and Annie Waldman).
 
 ## Errors / Bugs
 

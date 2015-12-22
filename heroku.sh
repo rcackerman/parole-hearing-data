@@ -10,6 +10,9 @@ echo "$SSH_PUBLIC_KEY" > .ssh/id_rsa.pub
 echo -e "Host github.com\n\tStrictHostKeyChecking no\n" >> ~/.ssh/config
 
 git init
+git config --global user.email 'nikzei@gmail.com'
+git config --global user.name 'Nikki Zeichner'
+
 git remote add origin git@github.com:talos/parole-hearing-data.git
 git pull origin master
 

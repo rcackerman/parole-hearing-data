@@ -283,7 +283,7 @@ def print_data(parolees):
         if 'scrape date' not in parolee:
             parolee['scrape date'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
 
-    parolees = sorted(parolees, key=lambda x: (x[u"parole board interview date"], x[u"din"]))
+    parolees = sorted(parolees, key=lambda x: (x[u"parole board interview date"], x.get(u"din")))
     out = csv.DictWriter(sys.stdout, extrasaction='ignore',
                          delimiter=',', fieldnames=headers)
     out.writeheader()

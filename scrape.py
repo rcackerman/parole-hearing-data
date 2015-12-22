@@ -14,6 +14,7 @@ from dateutil import parser as dateparser
 ROOT_URL = 'http://161.11.133.89/ParoleBoardCalendar'
 DETAIL_URL = ROOT_URL + '/details.asp?nysid={number}'
 INTERVIEW_URL = ROOT_URL + '/interviews.asp?name={letter}&month={month}&year={year}'
+FORBIDDEN_HEADERS = [u'inmate name']
 
 
 def get_existing_parolees(path):
@@ -24,8 +25,18 @@ def get_existing_parolees(path):
     parolees = {}
     with open(path, 'rU') as csvfile:
         for row in csv.DictReader(csvfile, delimiter=',', quotechar='"'):
-            row = dict((k.lower(), v) for k, v in row.iteritems())
-            parolees[(row[u"din"], row[u"parole board interview date"])] = row
+
+            # Ensure row is lowercased (this caused issues with legacy data)
+            lc_row = {}
+            for key, value in row.iteritems():
+                key = key.lower()
+                if value:
+                    if key in lc_row:
+                        if lc_row[key]:
+                            raise Exception("Duplicate values in similar keys")
+                    lc_row[key] = value
+
+            parolees[(row[u"din"], row[u"parole board interview date"])] = lc_row
     return parolees
 
 
@@ -52,6 +63,30 @@ def get_general_parolee_keys(scraper, url):
     keys_th = soup.find('table', class_='intv').find('tr').find_all('th')
     return [unicode(key.string) for key in keys_th]
 
+
+def fix_defective_sentence(sentence):
+    """
+    Most of the sentences in existing data were erroneously converted from
+    "NN-NN" to "Month-NN" or "NN-Month", for example "03-00" to "Mar-00".  This
+    fixes these mistakes.
+    """
+    if not sentence:
+        return sentence
+    sentence = sentence.split('-')
+    month2num = {"jan": "01", "feb": "02", "mar": "03", "apr": "04",
+                 "may": "05", "jun": "06", "jul": "07", "aug": "08",
+                 "sep": "09", "oct": "10", "nov": "11", "dec": "12"}
+    for i, val in enumerate(sentence):
+        sentence[i] = month2num.get(val.lower(), ('00' + val)[-2:])
+    try:
+        # sometimes the min/max is flipped.
+        if int(sentence[0]) > int(sentence[1]) and int(sentence[1]) != 0:
+            sentence = [sentence[1], sentence[0]]
+    except ValueError:
+        pass
+    return '-'.join(sentence)
+
+
 def get_headers(list_of_dicts):
     """
     Returns a set of every different key in a list of dicts.
@@ -59,6 +94,7 @@ def get_headers(list_of_dicts):
     return set().union(*[l.keys() for l in list_of_dicts])
 
 
+# pylint: disable=too-many-locals
 def scrape_interviews(scraper):
     """
     Scrape all interviews.  Returns a list of parolees, with minimal data,
@@ -88,7 +124,14 @@ def scrape_interviews(scraper):
                 continue
             parolee = {}
             for i, cell in enumerate(cells):
-                parolee[parolee_keys[i].lower()] = cell.string.strip()
+                key = parolee_keys[i].lower()
+                value = cell.string.strip()
+                if "date" in key and value:
+                    try:
+                        value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                    except ValueError:
+                        pass
+                parolee[key] = value
             parolees.append(parolee)
 
         # Keep track of originally scheduled month/year
@@ -97,6 +140,7 @@ def scrape_interviews(scraper):
                 year, month)
 
     return parolees
+# pylint: enable=too-many-locals
 
 
 # pylint: disable=too-many-locals
@@ -130,13 +174,18 @@ def scrape_details(scraper, parolee_input):
             key = key.lower()
             if "nysid" in key or "name" in key or "din" in key:
                 continue
+            if "date" in key and value:
+                try:
+                    value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                except ValueError:
+                    pass
             parolee[key] = value.strip().replace(u'\xa0', u'')
 
         for crime_num, crime in enumerate(crimes[1:]):
             title = [ct.format(crime_num + 1) for ct in crime_titles]
             i = 0
             while i < len(crime):
-                parolee[title[i]] = crime.find_all('td')[i].string.strip()
+                parolee[title[i].lower()] = crime.find_all('td')[i].string.strip()
                 i += 1
 
         out.append(parolee)
@@ -150,6 +199,9 @@ def reorder_headers(supplied):
     unexpected supplied headers are appended alphabetically to the end.  Any
     expected headers not supplied are not included.
     """
+    for forbidden_header in FORBIDDEN_HEADERS:
+        if forbidden_header in supplied:
+            supplied.remove(forbidden_header)
     headers = []
     expected = [
         "parole board interview date",
@@ -218,14 +270,21 @@ def print_data(parolees):
     # when possible
     for parolee in parolees:
         for key, value in parolee.iteritems():
-            if "date" in key:
+            if "inmate name" in key:
+                continue
+            if "date" in key.lower() and value:
                 try:
                     parolee[key] = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
                 except ValueError:
-                    pass
+                    parolee[key] = value
+            elif "sentence" in key.lower():
+                parolee[key] = fix_defective_sentence(value)
+        if 'scrape date' not in parolee:
+            parolee['scrape date'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
 
     parolees = sorted(parolees, key=lambda x: (x[u"parole board interview date"], x[u"din"]))
-    out = csv.DictWriter(sys.stdout, delimiter=',', fieldnames=headers)
+    out = csv.DictWriter(sys.stdout, extrasaction='ignore',
+                         delimiter=',', fieldnames=headers)
     out.writeheader()
     out.writerows(parolees)
 

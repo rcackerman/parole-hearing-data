@@ -43,11 +43,11 @@ in your system by adapting the line and pasting it in to `crontab -e`.
 
 ## Team
 
-Nikki Zeichner, <a href= "codeforamerica.org">Code for America</a>
+Nikki Zeichner, <a href= "http://codeforamerica.org">Code for America</a>
 
-Rebecca Ackerman, <a href="casecommons.org">Case Commons</a> 
+Rebecca Ackerman, <a href="http://casecommons.org">Case Commons</a> 
 
-John Krauss, <a href= "cartodb.com">CartoDB</a> 
+John Krauss, <a href= "http://cartodb.com">CartoDB</a> 
 
 And a special thanks to R. Luke DuBois of <a href= "http://engineering.nyu.edu/user/1797">NYU</a> and Annie Waldman of <a href= "http://www.propublica.org/site/author/annie_waldman">ProPublica</a>.
 

@@ -137,15 +137,50 @@ def scrape_interviews(scraper):
                     except ValueError:
                         pass
                 parolee[key] = value
+
+            # Keep track of originally scheduled month/year
+            if parolee[u"parole board interview date"] == u'*':
+                parolee[u"parole board interview date"] = u'{}-{}-*'.format(
+                    year, '0{}'.format(month)[-2:])
+
             parolees.append(parolee)
 
-        # Keep track of originally scheduled month/year
-        if parolee[u"parole board interview date"] == u'*':
-            parolee[u"parole board interview date"] = u'{}-{}-*'.format(
-                year, '0{}'.format(month)[-2:])
-
     return parolees
-# pylint: enable=too-many-locals
+
+
+# pylint: disable=too-many-locals
+def scrape_detail_parolee(parolee, scraper):
+    url = DETAIL_URL.format(number=parolee['nysid'])
+    sys.stderr.write(url + '\n')
+
+    soup = BeautifulSoup(scraper.urlopen(url, timeout=5))
+    detail_table = soup.find('table', class_="detl")
+    if not detail_table:
+        return
+
+    crimes = soup.find('table', class_="intv").find_all('tr')
+    crime_titles = [u"crime {} - " + unicode(th.string)
+                    for th in soup.find('table', class_="intv").find_all('th')]
+    for row in detail_table:
+        key, value = row.getText().split(":")
+        # we don't need to capture the nysid, name, or din again
+        key = key.lower()
+        if "nysid" in key or "name" in key or "din" in key:
+            continue
+        if "date" in key and value:
+            try:
+                value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+            except ValueError:
+                pass
+        parolee[key] = value.strip().replace(u'\xa0', u'')
+
+    for crime_num, crime in enumerate(crimes[1:]):
+        title = [ct.format(crime_num + 1) for ct in crime_titles]
+        i = 0
+        while i < len(crime):
+            parolee[title[i].lower()] = crime.find_all('td')[i].string.strip()
+            i += 1
+    return parolee
 
 
 # pylint: disable=too-many-locals
@@ -166,40 +201,9 @@ def scrape_details(q, out, scraper):
                 q.task_done()
                 continue
 
-            url = DETAIL_URL.format(number=parolee['nysid'])
-            sys.stderr.write(url + '\n')
-
-            soup = BeautifulSoup(scraper.urlopen(url, timeout=5))
-            detail_table = soup.find('table', class_="detl")
-            if not detail_table:
-                q.task_done()
-                continue
-
-            crimes = soup.find('table', class_="intv").find_all('tr')
-            crime_titles = [u"crime {} - " + unicode(th.string)
-                            for th in soup.find('table', class_="intv").find_all('th')]
-
-            for row in detail_table:
-                key, value = row.getText().split(":")
-                # we don't need to capture the nysid, name, or din again
-                key = key.lower()
-                if "nysid" in key or "name" in key or "din" in key:
-                    continue
-                if "date" in key and value:
-                    try:
-                        value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
-                    except ValueError:
-                        pass
-                parolee[key] = value.strip().replace(u'\xa0', u'')
-
-            for crime_num, crime in enumerate(crimes[1:]):
-                title = [ct.format(crime_num + 1) for ct in crime_titles]
-                i = 0
-                while i < len(crime):
-                    parolee[title[i].lower()] = crime.find_all('td')[i].string.strip()
-                    i += 1
-
-            out.append(parolee)
+            parolee = scrape_detail_parolee(parolee, scraper)
+            if parolee:
+                out.append(parolee)
             q.task_done()
 
     return scrape_details_inner
@@ -347,9 +351,14 @@ def scrape(old_data_path, no_download):
             scheduled_key = (din, scheduled_date)
         else:
             scheduled_key = (din, interview_date)
+
+        # If this is an estimate of when the hearing will be, delete previous
+        # estimates
         if key != scheduled_key:
             if scheduled_key in existing_parolees:
                 del existing_parolees[scheduled_key]
+        if (din, '*') in existing_parolees:
+            del existing_parolees[(din, '*')]
 
         existing_parolees[key] = parolee
 

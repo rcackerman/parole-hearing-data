@@ -2,21 +2,25 @@
 Scrape all parole hearing data for NYS.
 """
 
-import csv
-import scrapelib
-import sys
 import argparse
-from bs4 import BeautifulSoup
+import csv
+import sys
+
+from datetime import datetime
 from string import ascii_uppercase
 from time import localtime, mktime
-from datetime import datetime
+from threading import Thread
+from Queue import Queue
+
+import scrapelib
+from bs4 import BeautifulSoup
 from dateutil import parser as dateparser
 
 ROOT_URL = 'http://161.11.133.89/ParoleBoardCalendar'
 DETAIL_URL = ROOT_URL + '/details.asp?nysid={number}'
 INTERVIEW_URL = ROOT_URL + '/interviews.asp?name={letter}&month={month}&year={year}'
 FORBIDDEN_HEADERS = [u'inmate name']
-
+CONCURRENCY = 8
 
 def get_existing_parolees(path):
     """
@@ -138,60 +142,67 @@ def scrape_interviews(scraper):
         # Keep track of originally scheduled month/year
         if parolee[u"parole board interview date"] == u'*':
             parolee[u"parole board interview date"] = u'{}-{}-*'.format(
-                year, month)
+                year, '0{}'.format(month)[-2:])
 
     return parolees
 # pylint: enable=too-many-locals
 
 
 # pylint: disable=too-many-locals
-def scrape_details(scraper, parolee_input):
+#def scrape_details(scraper, parolee_input):
+def scrape_details(q, out, scraper):
     """
     Scrape details for specified parolees.  Returns the same list, with
     additional data.
     """
-    out = []
-    for existing_parolee in parolee_input:
-        parolee = existing_parolee.copy()
-        if len(parolee) <= 1:
-            # Some blank rows sneak in; let's skip them.
-            continue
-
-        url = DETAIL_URL.format(number=parolee['nysid'])
-        sys.stderr.write(url + '\n')
-
-        soup = BeautifulSoup(scraper.urlopen(url, timeout=5))
-        detail_table = soup.find('table', class_="detl")
-        if not detail_table:
-            continue
-
-        crimes = soup.find('table', class_="intv").find_all('tr')
-        crime_titles = [u"crime {} - " + unicode(th.string)
-                        for th in soup.find('table', class_="intv").find_all('th')]
-
-        for row in detail_table:
-            key, value = row.getText().split(":")
-            # we don't need to capture the nysid, name, or din again
-            key = key.lower()
-            if "nysid" in key or "name" in key or "din" in key:
+    #out = []
+    #for existing_parolee in parolee_input:
+    #    parolee = existing_parolee.copy()
+    def scrape_details_inner():
+        while True:
+            parolee = q.get()
+            if len(parolee) <= 1:
+                # Some blank rows sneak in; let's skip them.
+                q.task_done()
                 continue
-            if "date" in key and value:
-                try:
-                    value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
-                except ValueError:
-                    pass
-            parolee[key] = value.strip().replace(u'\xa0', u'')
 
-        for crime_num, crime in enumerate(crimes[1:]):
-            title = [ct.format(crime_num + 1) for ct in crime_titles]
-            i = 0
-            while i < len(crime):
-                parolee[title[i].lower()] = crime.find_all('td')[i].string.strip()
-                i += 1
+            url = DETAIL_URL.format(number=parolee['nysid'])
+            sys.stderr.write(url + '\n')
 
-        out.append(parolee)
+            soup = BeautifulSoup(scraper.urlopen(url, timeout=5))
+            detail_table = soup.find('table', class_="detl")
+            if not detail_table:
+                q.task_done()
+                continue
 
-    return out
+            crimes = soup.find('table', class_="intv").find_all('tr')
+            crime_titles = [u"crime {} - " + unicode(th.string)
+                            for th in soup.find('table', class_="intv").find_all('th')]
+
+            for row in detail_table:
+                key, value = row.getText().split(":")
+                # we don't need to capture the nysid, name, or din again
+                key = key.lower()
+                if "nysid" in key or "name" in key or "din" in key:
+                    continue
+                if "date" in key and value:
+                    try:
+                        value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                    except ValueError:
+                        pass
+                parolee[key] = value.strip().replace(u'\xa0', u'')
+
+            for crime_num, crime in enumerate(crimes[1:]):
+                title = [ct.format(crime_num + 1) for ct in crime_titles]
+                i = 0
+                while i < len(crime):
+                    parolee[title[i].lower()] = crime.find_all('td')[i].string.strip()
+                    i += 1
+
+            out.append(parolee)
+            q.task_done()
+
+    return scrape_details_inner
 # pylint: enable=too-many-locals
 
 def reorder_headers(supplied):
@@ -290,12 +301,13 @@ def print_data(parolees):
     out.writerows(parolees)
 
 
+# pylint: disable=too-many-locals
 def scrape(old_data_path, no_download):
     """
     Main function -- read in existing data, scrape new data, merge the two
     sets, and save to the output location.
     """
-    scraper = scrapelib.Scraper(requests_per_minute=180,
+    scraper = scrapelib.Scraper(requests_per_minute=1000,
                                 retry_attempts=5, retry_wait_seconds=15)
 
     if old_data_path:
@@ -307,9 +319,18 @@ def scrape(old_data_path, no_download):
         new_parolees = []
     else:
         new_parolees = scrape_interviews(scraper)
-        new_parolees = scrape_details(scraper, new_parolees)
 
+    q = Queue(CONCURRENCY * 2)
+    new_parolees_with_details = []
+    for _ in xrange(0, CONCURRENCY):
+        t = Thread(target=scrape_details(q, new_parolees_with_details, scraper))
+        t.daemon = True
+        t.start()
     for parolee in new_parolees:
+        q.put(parolee)
+    q.join()
+
+    for parolee in new_parolees_with_details:
         din = parolee[u"din"]
         interview_date = parolee[u"parole board interview date"]
         key = (din, interview_date)
@@ -319,8 +340,13 @@ def scrape(old_data_path, no_download):
         # advance -- only a month and year.  This is notated via the date
         # "YYYY-MM-*".  However, once the interview has happened, we have
         # a date and should replace that row.
-        scheduled_date = '-'.join(interview_date.split('-')[0:2]) + '-*'
-        scheduled_key = (din, scheduled_date)
+        if len(interview_date.split('-')) > 1:
+            scheduled_year, scheduled_month = interview_date.split('-')[0:2]
+            scheduled_month = '0{}'.format(scheduled_month)[-2:]
+            scheduled_date = '{}-{}-*'.format(scheduled_year, scheduled_month)
+            scheduled_key = (din, scheduled_date)
+        else:
+            scheduled_key = (din, interview_date)
         if key != scheduled_key:
             if scheduled_key in existing_parolees:
                 del existing_parolees[scheduled_key]

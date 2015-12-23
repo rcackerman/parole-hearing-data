@@ -43,7 +43,13 @@ in your system by adapting the line and pasting it in to `crontab -e`.
 
 ## Team
 
-The Parole Hearing Data Project was conceived of by <b>Nikki Zeichner</b>, a lawyer, who became interested in this subject matter after representing an incarcerated man in his 10th hearing in front of the New York State parole board. <b>Rebecca Ackerman</b> (<a href="casecommons.org">Case Commons</a>) and <b>John Krauss</b> (<a href= "thegovlab.org">The GovLab @ NYU</a>) created and continue to work on the scrapers (based on earlier code by R. Luke DuBois and Annie Waldman).
+Nikki Zeichner, <a href= "codeforamerica.org">Code for America</a>
+
+Rebecca Ackerman, <a href="casecommons.org">Case Commons</a> 
+
+John Krauss <a href= "cartodb.com">CartoDB</a> 
+
+And a special thanks to R. Luke DuBois of <a href= "http://engineering.nyu.edu/user/1797">NYU</a> and Annie Waldman of <a href= "http://www.propublica.org/site/author/annie_waldman">ProPublica</a>.
 
 ## Errors / Bugs
 

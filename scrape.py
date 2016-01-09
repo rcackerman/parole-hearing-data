@@ -51,10 +51,12 @@ def baseurls():
     generator.  Yields the URL, then the year and month it's for.
     """
     today = localtime()
-    for monthdiff in xrange(-25, 7):
+    #for monthdiff in xrange(-25, 7):
+    for monthdiff in xrange(-2, -1):
         year, month = localtime(mktime(
             [today.tm_year, today.tm_mon + monthdiff, 1, 0, 0, 0, 0, 0, 0]))[:2]
-        for letter in ascii_uppercase:
+        #for letter in ascii_uppercase:
+        for letter in 'A':
             yield (INTERVIEW_URL.format(letter=letter, month=str(month).zfill(2), year=year),
                    year, month)
 
@@ -64,7 +66,7 @@ def get_general_parolee_keys(scraper, url):
     Obtains a list of the standard parolee data keys (table headers) from the
     specified URL.
     """
-    soup = BeautifulSoup(scraper.urlopen(url))
+    soup = BeautifulSoup(scraper.urlopen(url), 'lxml')
     keys_th = soup.find('table', class_='intv').find('tr').find_all('th')
     return [unicode(key.string) for key in keys_th]
 
@@ -111,7 +113,7 @@ def scrape_interviews(scraper):
     for url, year, month in baseurls():
         sys.stderr.write(url + '\n')
 
-        soup = BeautifulSoup(scraper.urlopen(url))
+        soup = BeautifulSoup(scraper.urlopen(url), 'lxml')
 
         # All parolees are within the central table.
         parolee_table = soup.find('table', class_="intv")
@@ -138,10 +140,13 @@ def scrape_interviews(scraper):
                         pass
                 parolee[key] = value
 
+            # As of 1/8/16, they removed NYSID column. fun!
+            parolee['nysid'] = row.find('a').get('href').split('nysid=')[1]
             # Keep track of originally scheduled month/year
             if parolee[u"parole board interview date"] == u'*':
                 parolee[u"parole board interview date"] = u'{}-{}-*'.format(
                     year, '0{}'.format(month)[-2:])
+
 
             parolees.append(parolee)
 
@@ -153,7 +158,7 @@ def scrape_detail_parolee(parolee, scraper):
     url = DETAIL_URL.format(number=parolee['nysid'])
     sys.stderr.write(url + '\n')
 
-    soup = BeautifulSoup(scraper.urlopen(url, timeout=5))
+    soup = BeautifulSoup(scraper.urlopen(url, timeout=5), 'lxml')
     detail_table = soup.find('table', class_="detl")
     if not detail_table:
         return
@@ -357,10 +362,12 @@ def scrape(old_data_path, no_download):
         if key != scheduled_key:
             if scheduled_key in existing_parolees:
                 del existing_parolees[scheduled_key]
+
+        # We shouldn't be creating these anymore.
         if (din, '*') in existing_parolees:
             del existing_parolees[(din, '*')]
 
-        existing_parolees[key] = parolee
+        existing_parolees[key].update(parolee)
 
     print_data(existing_parolees.values())
 

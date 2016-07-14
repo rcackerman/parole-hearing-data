@@ -1,6 +1,6 @@
 beautifulsoup4==4.4.1
-requests==2.4.3
-scrapelib==0.10.0
-wsgiref==0.1.2
-python-dateutil
-lxml
+lxml==3.6.0
+python-dateutil==2.5.3
+requests==2.10.0
+scrapelib==1.0.0
+six==1.10.0

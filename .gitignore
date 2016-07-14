@@ -4,3 +4,4 @@
 *.swp
 output.csv
 log.txt
+env

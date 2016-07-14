@@ -367,7 +367,10 @@ def scrape(old_data_path, no_download):
         if (din, '*') in existing_parolees:
             del existing_parolees[(din, '*')]
 
-        existing_parolees[key].update(parolee)
+        try:
+            existing_parolees[key].update(parolee)
+        except KeyError:
+            existing_parolees[key] = parolee
 
     print_data(existing_parolees.values())
 

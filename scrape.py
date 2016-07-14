@@ -2,6 +2,7 @@
 Scrape all parole hearing data for NYS.
 """
 
+import pdb
 import argparse
 import csv
 import sys
@@ -66,7 +67,8 @@ def get_general_parolee_keys(scraper, url):
     Obtains a list of the standard parolee data keys (table headers) from the
     specified URL.
     """
-    soup = BeautifulSoup(scraper.urlopen(url), 'lxml')
+    scrape = scraper.get(url)
+    soup = BeautifulSoup(scrape.content, 'lxml')
     keys_th = soup.find('table', class_='intv').find('tr').find_all('th')
     return [unicode(key.string) for key in keys_th]
 
@@ -112,8 +114,10 @@ def scrape_interviews(scraper):
 
     for url, year, month in baseurls():
         sys.stderr.write(url + '\n')
-
-        soup = BeautifulSoup(scraper.urlopen(url), 'lxml')
+		
+        scrape = scraper.get(url)
+        # pdb.set_trace()
+        soup = BeautifulSoup(scrape.content, 'lxml')
 
         # All parolees are within the central table.
         parolee_table = soup.find('table', class_="intv")
@@ -158,7 +162,8 @@ def scrape_detail_parolee(parolee, scraper):
     url = DETAIL_URL.format(number=parolee['nysid'])
     sys.stderr.write(url + '\n')
 
-    soup = BeautifulSoup(scraper.urlopen(url, timeout=5), 'lxml')
+    scrape = scraper.get(url, timeout=5)
+    soup = BeautifulSoup(scrape.content, 'lxml')
     detail_table = soup.find('table', class_="detl")
     if not detail_table:
         return

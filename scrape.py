@@ -61,14 +61,12 @@ def baseurls():
                    year, month)
 
 
-def get_general_parolee_keys(scraper, url):
+def get_general_parolee_keys(table):
     """
     Obtains a list of the standard parolee data keys (table headers) from the
     specified URL.
     """
-    scrape = scraper.get(url)
-    soup = BeautifulSoup(scrape.content, 'lxml')
-    keys_th = get_table(soup, 'intv').find('tr').find_all('th')
+    keys_th = table.find_all('th')
     return [unicode(key.string) for key in keys_th]
 
 
@@ -117,9 +115,6 @@ def get_table(soup, table_class):
         return soup.find('table', class_=table_class)
     else:
         return false
-    # parolee_table = soup.find('table', class_="intv")
-    # if not parolee_table:
-        # continue
 
 # pylint: disable=too-many-locals
 def scrape_interviews(scraper):
@@ -141,7 +136,7 @@ def scrape_interviews(scraper):
             continue
 
         if parolee_keys is None:
-            parolee_keys = get_general_parolee_keys(scraper, url)
+            parolee_keys = get_general_parolee_keys(parolee_table)
 
         # Splitting out into one line per parolee.
         parolee_tr = parolee_table.find_all('tr')

@@ -2,7 +2,7 @@
 Scrape all parole hearing data for NYS.
 """
 
-import pdb
+# import ipdb
 import argparse
 import csv
 import sys
@@ -59,20 +59,12 @@ def baseurls():
         year, month = localtime(mktime([today.tm_year,
                                         today.tm_mon + monthdiff,
                                         1, 0, 0, 0, 0, 0, 0]))[:2]
+        # for letter in 'A': # for debugging only
         for letter in ascii_uppercase:
             yield (INTERVIEW_URL.format(letter=letter,
                                         month=str(month).zfill(2),
                                         year=year),
                    year, month)
-
-
-def get_general_parolee_keys(table):
-    """
-    Obtains a list of the standard parolee data keys (table headers) from the
-    specified URL.
-    """
-    keys_th = table.find_all('th')
-    return [unicode(key.string) for key in keys_th]
 
 
 def fix_defective_sentence(sentence):
@@ -123,6 +115,45 @@ def get_table(soup, table_class):
         return False
 
 
+def get_general_parolee_keys(row):
+    """
+    Obtains a list of the standard parolee data keys (table headers) from the
+    specified URL.
+    """
+    keys_th = row.find_all('th')
+    return [unicode(key.string) for key in keys_th]
+
+
+def get_nysid(row):
+    """
+    As of 1/8/16, they removed NYSID column. fun!
+    Now we get the NYSID (used for finding details) from the url.
+    """
+    return row.find('a').get('href').split('nysid=')[1]
+
+
+def parse_row(row, keys, item):
+    """
+    Parse a normal row that has no <th> tags.
+    Takes in a dictionary item, and returns that item
+    with key, value pairs filled out.
+    """
+    cells = row.find_all('td')
+    if not cells:
+        pass
+    for i, cell in enumerate(cells):
+        key = keys[i].lower()
+        value = cell.string.strip()
+        if "date" in key and value:
+            try:
+                value = datetime.strftime(dateparser.parse(value),
+                                          '%Y-%m-%d')
+            except (ValueError, TypeError):
+                pass
+        item[key] = value
+    return item
+
+
 # pylint: disable=too-many-locals
 def scrape_interviews(scraper):
     """
@@ -141,29 +172,18 @@ def scrape_interviews(scraper):
         if not parolee_table:
             continue
 
-        if parolee_keys is None:
-            parolee_keys = get_general_parolee_keys(parolee_table)
+        # if parolee_keys is None:
+            # parolee_keys = get_general_parolee_keys(parolee_table)
 
-        # Splitting out into one line per parolee.
-        parolee_tr = parolee_table.find_all('tr')
-        for row in parolee_tr:
-            cells = row.find_all('td')
-            if not cells:
-                continue
+        rows = parolee_table.find_all('tr')
+        parolee_keys = get_general_parolee_keys(rows.pop(0))
+
+        # Parsing each row.
+        for row in rows:
             parolee = {}
-            for i, cell in enumerate(cells):
-                key = parolee_keys[i].lower()
-                value = cell.string.strip()
-                if "date" in key and value:
-                    try:
-                        value = datetime.strftime(dateparser.parse(value),
-                                                  '%Y-%m-%d')
-                    except (ValueError, TypeError):
-                        pass
-                parolee[key] = value
+            parse_row(row, parolee_keys, parolee)
 
-            # As of 1/8/16, they removed NYSID column. fun!
-            parolee['nysid'] = row.find('a').get('href').split('nysid=')[1]
+            parolee['nysid'] = get_nysid(row)
             # Keep track of originally scheduled month/year
             if parolee[u"parole board interview date"] == u'*':
                 parolee[u"parole board interview date"] = u'{}-{}-*'.format(
@@ -183,10 +203,6 @@ def scrape_detail_parolee(parolee, scraper):
     detail_table = get_table(soup, "detl")
     if not detail_table:
         return
-
-    crimes = get_table(soup, "intv").find_all('tr')
-    crime_titles = [u"crime {} - " + unicode(th.string)
-                    for th in get_table(soup, "intv").find_all('th')]
     for row in detail_table:
         key, value = row.getText().split(":")
         # we don't need to capture the nysid, name, or din again
@@ -200,7 +216,11 @@ def scrape_detail_parolee(parolee, scraper):
                 pass
         parolee[key] = value.strip().replace(u'\xa0', u'')
 
-    for crime_num, crime in enumerate(crimes[1:]):
+    crimes = get_table(soup, "intv").find_all('tr')
+    # ipdb.set_trace()
+    crime_titles = [u"crime {} - " + i
+                    for i in get_general_parolee_keys(crimes.pop(0))]
+    for crime_num, crime in enumerate(crimes):
         title = [ct.format(crime_num + 1) for ct in crime_titles]
         i = 0
         while i < len(crime):

@@ -56,7 +56,6 @@ def baseurls():
     for monthdiff in xrange(-2, -1):
         year, month = localtime(mktime(
             [today.tm_year, today.tm_mon + monthdiff, 1, 0, 0, 0, 0, 0, 0]))[:2]
-        #for letter in ascii_uppercase:
         for letter in ascii_uppercase:
             yield (INTERVIEW_URL.format(letter=letter, month=str(month).zfill(2), year=year),
                    year, month)
@@ -69,7 +68,7 @@ def get_general_parolee_keys(scraper, url):
     """
     scrape = scraper.get(url)
     soup = BeautifulSoup(scrape.content, 'lxml')
-    keys_th = soup.find('table', class_='intv').find('tr').find_all('th')
+    keys_th = get_table(soup, 'intv').find('tr').find_all('th')
     return [unicode(key.string) for key in keys_th]
 
 
@@ -103,6 +102,25 @@ def get_headers(list_of_dicts):
     return set().union(*[l.keys() for l in list_of_dicts])
 
 
+def get_soup(scraper, url, *args):
+    scrape = scraper.get(url, *args)
+    # pdb.set_trace()
+    return BeautifulSoup(scrape.content, 'lxml')
+
+def get_table(soup, table_class):
+    """
+    Look for the HTML table, searching by class.
+    Return false if no table is found.
+    """
+    # All parolees are within the central table.
+    if soup.find('table', class_=table_class):
+        return soup.find('table', class_=table_class)
+    else:
+        return false
+    # parolee_table = soup.find('table', class_="intv")
+    # if not parolee_table:
+        # continue
+
 # pylint: disable=too-many-locals
 def scrape_interviews(scraper):
     """
@@ -114,13 +132,11 @@ def scrape_interviews(scraper):
 
     for url, year, month in baseurls():
         sys.stderr.write(url + '\n')
-		
-        scrape = scraper.get(url)
-        # pdb.set_trace()
-        soup = BeautifulSoup(scrape.content, 'lxml')
+	
+        soup = get_soup(scraper, url)
 
         # All parolees are within the central table.
-        parolee_table = soup.find('table', class_="intv")
+        parolee_table = get_table(soup, "intv")
         if not parolee_table:
             continue
 
@@ -161,16 +177,15 @@ def scrape_interviews(scraper):
 def scrape_detail_parolee(parolee, scraper):
     url = DETAIL_URL.format(number=parolee['nysid'])
     sys.stderr.write(url + '\n')
+    soup = get_soup(scraper, url)
 
-    scrape = scraper.get(url, timeout=5)
-    soup = BeautifulSoup(scrape.content, 'lxml')
-    detail_table = soup.find('table', class_="detl")
+    detail_table = get_table(soup, "detl")
     if not detail_table:
         return
 
-    crimes = soup.find('table', class_="intv").find_all('tr')
+    crimes = get_table(soup, "intv").find_all('tr')
     crime_titles = [u"crime {} - " + unicode(th.string)
-                    for th in soup.find('table', class_="intv").find_all('th')]
+                    for th in get_table(soup, "intv").find_all('th')]
     for row in detail_table:
         key, value = row.getText().split(":")
         # we don't need to capture the nysid, name, or din again

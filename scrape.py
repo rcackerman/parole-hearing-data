@@ -23,6 +23,7 @@ INTERVIEW_URL = ROOT_URL + '/interviews.asp?name={letter}&month={month}&year={ye
 FORBIDDEN_HEADERS = [u'inmate name']
 CONCURRENCY = 8
 
+
 def get_existing_parolees(path):
     """
     Load in existing parole hearing data from provided path.  Turns into a
@@ -42,7 +43,8 @@ def get_existing_parolees(path):
                             raise Exception("Duplicate values in similar keys")
                     lc_row[key] = value
 
-            parolees[(row[u"din"], row[u"parole board interview date"])] = lc_row
+            parolees[(row[u"din"],
+                      row[u"parole board interview date"])] = lc_row
     return parolees
 
 
@@ -52,12 +54,15 @@ def baseurls():
     generator.  Yields the URL, then the year and month it's for.
     """
     today = localtime()
-    #for monthdiff in xrange(-25, 7):
+    # for monthdiff in xrange(-25, 7):
     for monthdiff in xrange(-2, -1):
-        year, month = localtime(mktime(
-            [today.tm_year, today.tm_mon + monthdiff, 1, 0, 0, 0, 0, 0, 0]))[:2]
+        year, month = localtime(mktime([today.tm_year,
+                                        today.tm_mon + monthdiff,
+                                        1, 0, 0, 0, 0, 0, 0]))[:2]
         for letter in ascii_uppercase:
-            yield (INTERVIEW_URL.format(letter=letter, month=str(month).zfill(2), year=year),
+            yield (INTERVIEW_URL.format(letter=letter,
+                                        month=str(month).zfill(2),
+                                        year=year),
                    year, month)
 
 
@@ -105,6 +110,7 @@ def get_soup(scraper, url, *args):
     # pdb.set_trace()
     return BeautifulSoup(scrape.content, 'lxml')
 
+
 def get_table(soup, table_class):
     """
     Look for the HTML table, searching by class.
@@ -114,7 +120,8 @@ def get_table(soup, table_class):
     if soup.find('table', class_=table_class):
         return soup.find('table', class_=table_class)
     else:
-        return false
+        return False
+
 
 # pylint: disable=too-many-locals
 def scrape_interviews(scraper):
@@ -127,7 +134,6 @@ def scrape_interviews(scraper):
 
     for url, year, month in baseurls():
         sys.stderr.write(url + '\n')
-	
         soup = get_soup(scraper, url)
 
         # All parolees are within the central table.
@@ -150,7 +156,8 @@ def scrape_interviews(scraper):
                 value = cell.string.strip()
                 if "date" in key and value:
                     try:
-                        value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                        value = datetime.strftime(dateparser.parse(value),
+                                                  '%Y-%m-%d')
                     except (ValueError, TypeError):
                         pass
                 parolee[key] = value
@@ -161,7 +168,6 @@ def scrape_interviews(scraper):
             if parolee[u"parole board interview date"] == u'*':
                 parolee[u"parole board interview date"] = u'{}-{}-*'.format(
                     year, '0{}'.format(month)[-2:])
-
 
             parolees.append(parolee)
 
@@ -204,15 +210,15 @@ def scrape_detail_parolee(parolee, scraper):
 
 
 # pylint: disable=too-many-locals
-#def scrape_details(scraper, parolee_input):
+# def scrape_details(scraper, parolee_input):
 def scrape_details(q, out, scraper):
     """
     Scrape details for specified parolees.  Returns the same list, with
     additional data.
     """
-    #out = []
-    #for existing_parolee in parolee_input:
-    #    parolee = existing_parolee.copy()
+    # out = []
+    # for existing_parolee in parolee_input:
+    #     parolee = existing_parolee.copy()
     def scrape_details_inner():
         while True:
             parolee = q.get()
@@ -228,6 +234,7 @@ def scrape_details(q, out, scraper):
 
     return scrape_details_inner
 # pylint: enable=too-many-locals
+
 
 def reorder_headers(supplied):
     """
@@ -294,6 +301,7 @@ def reorder_headers(supplied):
     headers.extend(sorted(supplied))
     return headers
 
+
 def print_data(parolees):
     """
     Prints output data to stdout, from which it can be piped to a file.  Orders
@@ -310,15 +318,19 @@ def print_data(parolees):
                 continue
             if "date" in key.lower() and value:
                 try:
-                    parolee[key] = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+                    parolee[key] = datetime.strftime(dateparser.parse(value),
+                                                     '%Y-%m-%d')
                 except (ValueError, TypeError):
                     parolee[key] = value
             elif "sentence" in key.lower():
                 parolee[key] = fix_defective_sentence(value)
         if 'scrape date' not in parolee:
-            parolee['scrape date'] = datetime.strftime(datetime.now(), '%Y-%m-%d')
+            parolee['scrape date'] = datetime.strftime(datetime.now(),
+                                                       '%Y-%m-%d')
 
-    parolees = sorted(parolees, key=lambda x: (x[u"parole board interview date"], x[u"din"]))
+    parolees = sorted(parolees,
+                      key=lambda x: (x[u"parole board interview date"],
+                                     x[u"din"]))
     out = csv.DictWriter(sys.stdout, extrasaction='ignore',
                          delimiter=',', fieldnames=headers)
     out.writeheader()
@@ -347,7 +359,9 @@ def scrape(old_data_path, no_download):
     q = Queue(CONCURRENCY * 2)
     new_parolees_with_details = []
     for _ in xrange(0, CONCURRENCY):
-        t = Thread(target=scrape_details(q, new_parolees_with_details, scraper))
+        t = Thread(target=scrape_details(q,
+                                         new_parolees_with_details,
+                                         scraper))
         t.daemon = True
         t.start()
     for parolee in new_parolees:

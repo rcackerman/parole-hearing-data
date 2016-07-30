@@ -2,7 +2,7 @@
 Scrape all parole hearing data for NYS.
 """
 
-# import ipdb
+import ipdb
 import argparse
 import csv
 import sys
@@ -200,6 +200,7 @@ def scrape_detail_parolee(parolee, scraper):
     sys.stderr.write(url + '\n')
     soup = get_soup(scraper, url)
 
+    # get parolee details
     detail_table = get_table(soup, "detl")
     if not detail_table:
         return
@@ -216,16 +217,13 @@ def scrape_detail_parolee(parolee, scraper):
                 pass
         parolee[key] = value.strip().replace(u'\xa0', u'')
 
-    crimes = get_table(soup, "intv").find_all('tr')
-    # ipdb.set_trace()
-    crime_titles = [u"crime {} - " + i
-                    for i in get_general_parolee_keys(crimes.pop(0))]
-    for crime_num, crime in enumerate(crimes):
-        title = [ct.format(crime_num + 1) for ct in crime_titles]
-        i = 0
-        while i < len(crime):
-            parolee[title[i].lower()] = crime.find_all('td')[i].string.strip()
-            i += 1
+    # get crimes
+    rows = get_table(soup, "intv").find_all('tr')
+    crime_titles = [(u"crime {} - " + i)
+                    for i in get_general_parolee_keys(rows.pop(0))]
+    for i, row in enumerate(rows):
+        titles = [ct.format(i + 1) for ct in crime_titles]
+        parse_row(row, titles, parolee)
     return parolee
 
 

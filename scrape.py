@@ -98,6 +98,9 @@ def get_headers(list_of_dicts):
 
 
 def get_soup(scraper, url, *args):
+    """
+    Return a Beautiful Soup object of the contents of the response.
+    """
     scrape = scraper.get(url, *args)
     # pdb.set_trace()
     return BeautifulSoup(scrape.content, 'lxml')
@@ -132,7 +135,7 @@ def get_nysid(row):
     return row.find('a').get('href').split('nysid=')[1]
 
 
-def parse_row(row, keys, item):
+def parse_row(row, keys):
     """
     Parse a normal row that has no <th> tags.
     Takes in a dictionary item, and returns that item
@@ -150,8 +153,26 @@ def parse_row(row, keys, item):
                                           '%Y-%m-%d')
             except (ValueError, TypeError):
                 pass
-        item[key] = value
-    return item
+    return {key: value}
+
+
+def parse_non_cell_rows(row, skip_list):
+    """Parse rows where values aren't split into cells,
+    skipping any in the skip list. Uses the information to
+    fill in the key, value pair for the dictionary item.
+    """
+    key, value = row.getText().split(":")
+    # we don't need to capture the nysid, name, or din again
+    key = key.lower()
+
+    if key in skip_list:
+        pass
+    if "date" in key and value:
+        try:
+            value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
+        except ValueError:
+            pass
+    return {key: value.strip().replace(u'\xa0', u'')}
 
 
 # pylint: disable=too-many-locals
@@ -169,6 +190,7 @@ def scrape_interviews(scraper):
 
         # All parolees are within the central table.
         parolee_table = get_table(soup, "intv")
+        # But some pages don't have any parolees.
         if not parolee_table:
             continue
 
@@ -181,7 +203,8 @@ def scrape_interviews(scraper):
         # Parsing each row.
         for row in rows:
             parolee = {}
-            parse_row(row, parolee_keys, parolee)
+            _ = parse_row(row, parolee_keys)
+            parolee.update(_)
 
             parolee['nysid'] = get_nysid(row)
             # Keep track of originally scheduled month/year
@@ -203,19 +226,15 @@ def scrape_detail_parolee(parolee, scraper):
     # get parolee details
     detail_table = get_table(soup, "detl")
     if not detail_table:
+        # if there's no detail table we know there isn't anything else
         return
+
     for row in detail_table:
-        key, value = row.getText().split(":")
         # we don't need to capture the nysid, name, or din again
-        key = key.lower()
-        if "nysid" in key or "name" in key or "din" in key:
-            continue
-        if "date" in key and value:
-            try:
-                value = datetime.strftime(dateparser.parse(value), '%Y-%m-%d')
-            except ValueError:
-                pass
-        parolee[key] = value.strip().replace(u'\xa0', u'')
+        # so skip them
+        _ = parse_non_cell_rows(row, skip_list=["nysid", "name", "din"])
+        # update the parolee dictionary with the new key, value pair
+        parolee.update(_)
 
     # get crimes
     rows = get_table(soup, "intv").find_all('tr')
@@ -223,7 +242,8 @@ def scrape_detail_parolee(parolee, scraper):
                     for i in get_general_parolee_keys(rows.pop(0))]
     for i, row in enumerate(rows):
         titles = [ct.format(i + 1) for ct in crime_titles]
-        parse_row(row, titles, parolee)
+        _ = parse_row(row, titles)
+        parolee.update(_)
     return parolee
 
 
@@ -252,7 +272,6 @@ def scrape_details(q, out, scraper):
 
     return scrape_details_inner
 # pylint: enable=too-many-locals
-
 
 def reorder_headers(supplied):
     """
@@ -318,7 +337,6 @@ def reorder_headers(supplied):
             headers.append(header)
     headers.extend(sorted(supplied))
     return headers
-
 
 def print_data(parolees):
     """

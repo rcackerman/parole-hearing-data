@@ -1,1 +1,7 @@
+.env
+.DS_Store
 *.pyc
+*.swp
+output.csv
+log.txt
+env

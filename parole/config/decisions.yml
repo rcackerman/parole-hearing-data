@@ -1,0 +1,14 @@
+ODOP: release
+PAROLED: release
+GRANTED: release
+REINSTATE: release
+OPEN DATE: release
+NO SUSREV: release
+DENIED: denial
+NOT GRANTD: denial
+M V NO S: denial
+M V SUS: denial
+SUST-REV: denial
+RCND&HOLD: ambiguous
+RCND&RELSE: ambiguous
+OR EARLIER: ambiguous

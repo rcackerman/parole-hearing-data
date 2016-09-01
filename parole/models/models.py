@@ -46,7 +46,7 @@ class ParoleBoardInterviews(Model):
 
     __tablename__ = 'parole_board_interviews'
 
-    person_id = Column(Integer, ForeignKey('people.id'), nullable=False, index=True)
+    parolee_id = Column(Integer, ForeignKey('parolees.id'), nullable=False, index=True)
     interview_date = Column(Date)
     interview_type = Column(String)
     housing_or_interview_facility = Column(String)

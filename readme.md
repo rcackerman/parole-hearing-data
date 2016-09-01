@@ -45,9 +45,11 @@ in your system by adapting the line and pasting it in to `crontab -e`.
 
 Nikki Zeichner, <a href= "http://codeforamerica.org">Code for America</a>
 
-Rebecca Ackerman, <a href="http://casecommons.org">Case Commons</a> 
+Rebecca Ackerman, <a href="http://twitter.com/aka_rca">self</a> 
 
 John Krauss, <a href= "http://cartodb.com">CartoDB</a> 
+
+Jane Adams, <a href="http://twitter.com/thejunglejane">self</a>
 
 And a special thanks to R. Luke DuBois of <a href= "http://engineering.nyu.edu/user/1797">NYU</a> and Annie Waldman of <a href= "http://www.propublica.org/site/author/annie_waldman">ProPublica</a>.
 

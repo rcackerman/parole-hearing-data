@@ -3,6 +3,7 @@ Transform raw parolee scrape information.
 '''
 
 import os
+from datetime import date
 import yaml
 
 _CONFIG_DIR = os.path.join(os.path.dirname(
@@ -15,24 +16,18 @@ _SIMPLIFIED_DECISIONS = yaml.load(
 _FORBIDDEN_HEADERS = [u'inmate name']
 
 
-def format_date(date):
-    if int(date) <= 50:
-        date = 2000 + int(date)
-        return date
-    elif int(date) > 50 and int(date) < 100:
-        date = 1900 + int(date)
-        return date
-    else:
-        return date
-
-
 def get_year_of_entry(parolee):
-    year_of_entry = format_date(parolee['din'][0:2])
-    parolee['year of entry'] = year_of_entry
-    return parolee
+    '''Parses the last 2 digits of the parolee's DIN to a 4 digit year.
+    The last 2 digits of the parolee's DIN are the year of entry
+    for the current sentence.
+    '''
+    din_year = int(parolee['din'][0:2])
+    # The maximum year of entry is this year.
+    max_year = int(date.today().strftime('%y'))
+    return 2000 + din_year if din_year <= max_year else 1900 + din_year
 
 
-def set_security_level(parolee):
+def get_security_level(parolee):
     """
     Takes a dictionary, finds the facility keys,
     and creates a key value pair with the security for that facility.

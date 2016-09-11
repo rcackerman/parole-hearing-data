@@ -13,45 +13,34 @@ _SECURITY_LEVELS = yaml.load(
                     open(os.path.join(_CONFIG_DIR, 'prisons.yml')))
 _SIMPLIFIED_DECISIONS = yaml.load(
                             open(os.path.join(_CONFIG_DIR, 'decisions.yml')))
-_FORBIDDEN_HEADERS = [u'inmate name']
+_FORBIDDEN_HEADERS = [u'name']
 
 
-def get_year_of_entry(parolee):
+def get_year_of_entry(din):
     '''Parses the last 2 digits of the parolee's DIN to a 4 digit year.
     The last 2 digits of the parolee's DIN are the year of entry
     for the current sentence.
     '''
-    din_year = int(parolee['din'][0:2])
+    din_year = int(din[0:2])
     # The maximum year of entry is this year.
     max_year = int(date.today().strftime('%y'))
     return 2000 + din_year if din_year <= max_year else 1900 + din_year
 
 
-def get_security_level(parolee):
-    """
-    Takes a dictionary, finds the facility keys,
-    and creates a key value pair with the security for that facility.
-    """
-
-    h_i_facility = parolee['housing or interview facility']
-    h_r_facility = parolee['housing/release facility']
-
-    h_i_sec_level = prison_list.PRISONS[h_i_facility]
-    h_r_sec_level = prison_list.PRISONS[h_r_facility]
-
-    parolee['housing/interview facility security level'] = h_i_sec_level
-    parolee['housing/release facility security level'] = h_r_sec_level
-    return parolee
+def get_security_level(parolee, facility_columns):
+    '''looks up the security level for a particular facility and returns a key/value pair.
+    '''
+    for i in facilities_columns:
+        yield { '{} security level'.format(i): _SECURITY_LEVELS[i] }
 
 
-def simplify_outcomes(parolee):
+def simplify_outcomes(decision):
     """
     Takes a parolee, finds the outcome,
     and creates a key value pair with a simplified outcome.
     """
-    decision = parolee['interview decision']
-    parolee['interview decision category'] = SIMPLIFIED_DECISIONS[decision]
-    return parolee
+    decision = parolee['decision']
+    return {'interview_decision_category': _SIMPLIFIED_DECISIONS[decision]}
 
 
 def fix_defective_sentence(sentence):

@@ -9,8 +9,8 @@ from dateutil import parser
 
 
 _BASE_URL = 'http://161.11.133.89/ParoleBoardCalendar/'
-_DETAIL_URL = ROOT_URL + 'details.asp?nysid={number}'
-_CALENDAR_URL = ROOT_URL + 'interviews.asp?'
+_DETAIL_URL = _BASE_URL + 'details.asp?nysid={number}'
+_CALENDAR_URL = _BASE_URL + 'interviews.asp?'
 
 
 def validate_requested_month(func):

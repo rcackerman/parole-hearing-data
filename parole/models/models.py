@@ -53,5 +53,6 @@ class ParoleBoardInterviews(Model):
     interview_decision = Column(String)
     interview_decision_category = Column(string)
     housing_or_interview_facility = Column(String)
+    housing_or_interview_facility_security = Column(String)
     release_date = Column(Date)
     release_type = Column(String)

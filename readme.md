@@ -43,7 +43,7 @@ in your system by adapting the line and pasting it in to `crontab -e`.
 
 ## Team
 
-Nikki Zeichner, <a href= "18F.gsa.gov">18F</a>
+Nikki Zeichner, <a href="https://18F.gsa.gov">18F</a>
 
 Rebecca Ackerman, <a href="http://twitter.com/aka_rca">self</a> 
 
